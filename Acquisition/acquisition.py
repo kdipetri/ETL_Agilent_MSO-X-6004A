@@ -21,7 +21,7 @@ from shutil import copy
 
 stop_asap = False
 
-import visa
+import pyvisa as visa
 
 def copytree(src, dst, symlinks=False, ignore=None):
     for item in os.listdir(src):
@@ -35,7 +35,7 @@ def copynew(source,destination):
 """#################SEARCH/CONNECT#################"""
 # establish communication with dpo
 rm = visa.ResourceManager()
-dpo = rm.open_resource('TCPIP::192.168.133.159::INSTR')
+dpo = rm.open_resource('TCPIP::192.168.133.2::INSTR')
 dpo.timeout = 3000000
 dpo.encoding = 'latin_1'
 print(dpo.query('*idn?'))

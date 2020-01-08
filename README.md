@@ -4,6 +4,12 @@ This is based on the Tektronix repository https://github.com/tommasoisi/Tektroni
 
 Instructions for the acquisition and reconstruction part are here:
 
+
+## Setup 
+pip install visa
+pip install pyvisa
+pip install pyvisa-py
+
 ## Acquisition
 *  This step produces files in the HDF5 format
 *  How to run? `python acquisition.py --numEvents 20000 --numPoints 8000 --trigCh 2 --trig -0.05`
