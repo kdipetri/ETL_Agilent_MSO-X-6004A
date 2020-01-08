@@ -44,17 +44,17 @@ parser = argparse.ArgumentParser(description='Run info.')
 
 parser.add_argument('--numEvents',metavar='Events', type=str,default = 500, help='numEvents (default 500)',required=True)
 parser.add_argument('--runNumber',metavar='runNumber', type=str,default = -1, help='runNumber (default -1)',required=False)
-parser.add_argument('--sampleRate',metavar='sampleRate', type=str,default = 20, help='Sampling rate (default 20)',required=True)
-parser.add_argument('--horizontalWindow',metavar='horizontalWindow', type=str,default = 125, help='horizontal Window (default 125)',required=True)
+parser.add_argument('--sampleRate',metavar='sampleRate', type=str,default = 6, help='Sampling rate (default 6)',required=False)
+parser.add_argument('--horizontalWindow',metavar='horizontalWindow', type=str,default = 125, help='horizontal Window (default 125)',required=False)
 # parser.add_argument('--numPoints',metavar='Points', type=str,default = 500, help='numPoints (default 500)',required=True)
 parser.add_argument('--trigCh',metavar='trigCh', type=str, default='AUX',help='trigger Channel (default Aux (-0.1V))',required=False)
 parser.add_argument('--trig',metavar='trig', type=float, default= -0.05, help='trigger value in V (default Aux (-0.05V))',required=False)
 parser.add_argument('--trigSlope',metavar='trigSlope', type=str, default= 'NEGative', help='trigger slope; positive(rise) or negative(fall)',required=False)
 
-parser.add_argument('--vScale1',metavar='vScale1', type=float, default= 0.02, help='Vertical scale, volts/div',required=False)
-parser.add_argument('--vScale2',metavar='vScale2', type=float, default= 0.02, help='Vertical scale, volts/div',required=False)
-parser.add_argument('--vScale3',metavar='vScale3', type=float, default= 0.02, help='Vertical scale, volts/div',required=False)
-parser.add_argument('--vScale4',metavar='vScale4', type=float, default= 0.02, help='Vertical scale, volts/div',required=False)
+parser.add_argument('--vScale1',metavar='vScale1', type=float, default= 0.2, help='Vertical scale, volts/div',required=False)
+parser.add_argument('--vScale2',metavar='vScale2', type=float, default= 0.2, help='Vertical scale, volts/div',required=False)
+parser.add_argument('--vScale3',metavar='vScale3', type=float, default= 0.2, help='Vertical scale, volts/div',required=False)
+parser.add_argument('--vScale4',metavar='vScale4', type=float, default= 0.2, help='Vertical scale, volts/div',required=False)
 
 parser.add_argument('--timeoffset',metavar='timeoffset', type=float, default=-130, help='Offset to compensate for trigger delay. This is the delta T between the center of the acquisition window and the trigger. (default for NimPlusX: -160 ns)',required=False)
 
@@ -88,18 +88,22 @@ vScale_ch3 =float(args.vScale3) # in Volts for division
 vScale_ch4 =float(args.vScale4) # in Volts for division
 
 #vertical position
-vPos_ch1 = 3  # in Divisions
+vPos_ch1 = -2  # in Divisions
 vPos_ch2 = 3  # in Divisions
 vPos_ch3 = 3  # in Divisions
-vPos_ch4 = 2  # in Divisions
+vPos_ch4 = 3  # in Divisions
 
 date = datetime.datetime.now()
+
+# helpful directory info
+this_package="/home/daq/ETL_Agilent_MSO-X-6004A/Acquisition"
 
 """#################CONFIGURE RUN NUMBER#################"""
 # increment the last runNumber by 1
 
 if runNumberParam == -1:
-	RunNumberFile = '/home/daq/JARVIS/AutoPilot/otsdaq_runNumber.txt'
+    #RunNumberFile = '/home/daq/JARVIS/AutoPilot/otsdaq_runNumber.txt'
+	RunNumberFile = "{}/runNumber.txt".format(this_package)
 	with open(RunNumberFile) as file:
 	    runNumber = int(file.read())
 	print('######## Starting RUN {} ########\n'.format(runNumber))
@@ -117,8 +121,10 @@ else: runNumber = runNumberParam
 # path = r"C:\Users\Public\Documents\Infiniium\Test_Feb18"
 path = r"C:\Users\Public\Documents\Infiniium\Test_March21"
 dpo.write(':DISK:MDIRectory "{}"'.format(path)) ## what is this for?
-log_path = "/home/daq/2019_04_April_CMSTiming/KeySightScope/ETL_Agilent_MSO-X-92004A/Acquisition/Logbook.txt"
-run_log_path = "/home/daq/2019_04_April_CMSTiming/KeySightScope/ETL_Agilent_MSO-X-92004A/Acquisition/RunLog.txt"
+#log_path = "/home/daq/2019_04_April_CMSTiming/KeySightScope/ETL_Agilent_MSO-X-92004A/Acquisition/Logbook.txt"
+#run_log_path = "/home/daq/2019_04_April_CMSTiming/KeySightScope/ETL_Agilent_MSO-X-92004A/Acquisition/RunLog.txt"
+log_path     = "{}/Logbook.txt".format(this_package)
+run_log_path = "{}/RunLog.txt".format(this_package)
 
 #Write in the log file
 logf = open(log_path,"a+")
@@ -217,63 +223,98 @@ time.sleep(2)
 
 print(dpo.write(':CDISplay'))
 
-dpo.write('*CLS;:SINGle')
 
-while True:
-#	print "Ader is ",dpo.query(':ADER?')
-#	print "OPC is ",dpo.query('*OPC?')
-	if (int(dpo.query(':ADER?')) == 1): 
-		print "Acquisition complete"
-		break
-	else:
-		#print "Still waiting" 
+# karri debugging
+ACQ_DONE=1
+ACQ_NOT_DONE=0
 
-		time.sleep(0.2)
+print("Acquiring signal(s) \n")
 
-#print(dpo.query('*OPC?'))
-# print("Trigger!")
+# Setup start time
+StartTime = time.time()
+MAX_TIME_TO_WAIT = 30 # 30 seconds for now -1 when done debugging
 
-tmp_file = open(run_log_path,"w")
-status = "writing"
-tmp_file.write(status)
-tmp_file.write("\n")
-tmp_file.close()
+# Clear all status registers (set them to 0)
+print ("Clear status registers \n")
+dpo.write("*CLS")
 
-dpo.write(':DISK:SEGMented ALL') ##save all segments (as opposed to just the current segment)
-print(dpo.query('*OPC?'))
-print("Ready to save all segments")
-time.sleep(0.5)
-dpo.write(':DISK:SAVE:WAVeform CHANnel1 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH1_%s",BIN,ON'%(runNumber))
-#dpo.write(':DISK:SAVE:WAVeform CHANnel1 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH1_test_4000events",BIN,ON')
+# Begin acquistion with non-blocking :SINGle command
+print("Begin acquistion with SINGle command \n")
+dpo.write(":SINGle")
 
-print(dpo.query('*OPC?'))
-print("Saved Channel 1 waveform")
-time.sleep(1)
-dpo.write(':DISK:SAVE:WAVeform CHANnel2 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH2_%s",BIN,ON'%(runNumber))
-#dpo.write(':DISK:SAVE:WAVeform CHANnel2 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH2_test_4000events",BIN,ON')
+# Could concatinate two commands for performance 
+#dpo.write('*CLS;:SINGle')
 
-print(dpo.query('*OPC?'))
-print("Saved Channel 2 waveform")
-time.sleep(1)
+# Ask oscilliscope if its done
+print ("Getting status \n")
+#Status = int(dpo.query(":ADER?")) # gets stuck
+#Status = int(dpo.query(":PDER?")) # gets stuck
+#Status = int(dpo.query("*OPC?")) # gets set to 1 when acq is done
+Status = 0
 
-dpo.write(':DISK:SAVE:WAVeform CHANnel3 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH3_%s",BIN,ON'%(runNumber))
-#dpo.write(':DISK:SAVE:WAVeform CHANnel3 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH3_test_4000events",BIN,ON')
+# Poll oscilloscope until Status is one
+while Status == ACQ_NOT_DONE and ( time.time() - StartTime <= MAX_TIME_TO_WAIT) :
+    #print Status, StartTime - time.time()
+    time.sleep(0.1) 
+    Status = int(dpo.query("*OPC?"))
+    #Status = int(dpo.query(":ADER?"))
+    #Status = int(dpo.query(":PDER?"))
 
-print(dpo.query('*OPC?'))
-print("Saved Channel 3 waveform")
-time.sleep(1)
+if Status == ACQ_DONE : 
+    print "Signal acquired \n"
 
-dpo.write(':DISK:SAVE:WAVeform CHANnel4 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH4_%s",BIN,ON'%(runNumber))
-#dpo.write(':DISK:SAVE:WAVeform CHANnel4 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH4_test_4000events",BIN,ON')
+    tmp_file = open(run_log_path,"w")
+    status = "writing"
+    tmp_file.write(status)
+    tmp_file.write("\n")
+    tmp_file.close()
+    
+    dpo.write(':DISK:SEGMented ALL') ##save all segments (as opposed to just the current segment)
+    print(dpo.query('*OPC?'))
+    print("Ready to save all segments")
+    time.sleep(0.5)
+    dpo.write(':DISK:SAVE:WAVeform CHANnel1 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH1_%s",BIN,ON'%(runNumber))
+    #dpo.write(':DISK:SAVE:WAVeform CHANnel1 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH1_test_4000events",BIN,ON')
+    
+    print(dpo.query('*OPC?'))
+    print("Saved Channel 1 waveform")
+    time.sleep(1)
+    dpo.write(':DISK:SAVE:WAVeform CHANnel2 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH2_%s",BIN,ON'%(runNumber))
+    #dpo.write(':DISK:SAVE:WAVeform CHANnel2 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH2_test_4000events",BIN,ON')
+    
+    print(dpo.query('*OPC?'))
+    print("Saved Channel 2 waveform")
+    time.sleep(1)
+    
+    dpo.write(':DISK:SAVE:WAVeform CHANnel3 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH3_%s",BIN,ON'%(runNumber))
+    #dpo.write(':DISK:SAVE:WAVeform CHANnel3 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH3_test_4000events",BIN,ON')
+    
+    print(dpo.query('*OPC?'))
+    print("Saved Channel 3 waveform")
+    time.sleep(1)
+    
+    dpo.write(':DISK:SAVE:WAVeform CHANnel4 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH4_%s",BIN,ON'%(runNumber))
+    #dpo.write(':DISK:SAVE:WAVeform CHANnel4 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH4_test_4000events",BIN,ON')
+    
+    print(dpo.query('*OPC?'))
+    print("Saved Channel 4 waveform")
+    
+    tmp_file2 = open(run_log_path,"w")
+    status = "ready"
+    tmp_file2.write(status)
+    tmp_file2.write("\n")
+    tmp_file2.close()
+    
+    
+    dpo.close()
+else : # Acquistion failed for some reason
+    print "Max wait time exceeded")    
+    print "Visually check scope for trigger, adjust if needed")
+    print "Properly closing the scope connection and exiting script")
+    
+    # stop scop 
+    dpo.query(":STOP;*OPC?")
+    dpo.clear()
+    dpo.close()
+        
 
-print(dpo.query('*OPC?'))
-print("Saved Channel 4 waveform")
-
-tmp_file2 = open(run_log_path,"w")
-status = "ready"
-tmp_file2.write(status)
-tmp_file2.write("\n")
-tmp_file2.close()
-
-
-dpo.close()
