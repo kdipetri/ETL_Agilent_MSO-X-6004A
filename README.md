@@ -12,10 +12,17 @@ pip install pyvisa-py
 
 ## Acquisition
 *  This step produces files in the HDF5 format
-*  How to run? `python acquisition.py --numEvents 20000 --numPoints 8000 --trigCh 2 --trig -0.05`
+*  How to run? 
 
 `python acquisition.py --numEvents 6000 --sampleRate 20 --horizontalWindow 125 --trigCh 1 --trig -0.05`
+
+## Saving files
+
+
 ## Reconstruction
+
+
+## Old
 *  The files created with the previous step are converted into ROOT TTree's using the h5py python package. This step requires the .h5 files for the 4 channels as input.
 *  First make sure you have the h5py package. If you have an existing python installation, do
 `pip install h5py`

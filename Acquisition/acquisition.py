@@ -51,7 +51,7 @@ parser.add_argument('--trigCh',metavar='trigCh', type=str, default='AUX',help='t
 parser.add_argument('--trig',metavar='trig', type=float, default= -0.05, help='trigger value in V (default Aux (-0.05V))',required=False)
 parser.add_argument('--trigSlope',metavar='trigSlope', type=str, default= 'NEGative', help='trigger slope; positive(rise) or negative(fall)',required=False)
 
-parser.add_argument('--vScale1',metavar='vScale1', type=float, default= 0.2, help='Vertical scale, volts/div',required=False)
+parser.add_argument('--vScale1',metavar='vScale1', type=float, default= 0.5, help='Vertical scale, volts/div',required=False)
 parser.add_argument('--vScale2',metavar='vScale2', type=float, default= 0.2, help='Vertical scale, volts/div',required=False)
 parser.add_argument('--vScale3',metavar='vScale3', type=float, default= 0.2, help='Vertical scale, volts/div',required=False)
 parser.add_argument('--vScale4',metavar='vScale4', type=float, default= 0.2, help='Vertical scale, volts/div',required=False)
@@ -269,35 +269,23 @@ if Status == ACQ_DONE :
     tmp_file.write("\n")
     tmp_file.close()
     
-    dpo.write(':DISK:SEGMented ALL') ##save all segments (as opposed to just the current segment)
+
+    # save files
+    # note: this scope is weird and can only save new waveforms to a usb 
+    scope_usb_path = "U:\\usb\\Waveforms"
     print(dpo.query('*OPC?'))
     print("Ready to save all segments")
-    time.sleep(0.5)
-    dpo.write(':DISK:SAVE:WAVeform CHANnel1 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH1_%s",BIN,ON'%(runNumber))
-    #dpo.write(':DISK:SAVE:WAVeform CHANnel1 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH1_test_4000events",BIN,ON')
+
+    channels = [1,2,3,4]
+    for channel in channels: 
+        dpo.write(':DISK:SEGMented ALL') ##save all segments (as opposed to just the current segment)
+        time.sleep(0.5)
+        dpo.write(':DISK:SAVE:WAVeform CHANnel{} ,"{}\\Waveform_CH{}_{}", BIN,ON'.format(channel,scope_usb_path,channel,runNumber))
     
-    print(dpo.query('*OPC?'))
-    print("Saved Channel 1 waveform")
-    time.sleep(1)
-    dpo.write(':DISK:SAVE:WAVeform CHANnel2 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH2_%s",BIN,ON'%(runNumber))
-    #dpo.write(':DISK:SAVE:WAVeform CHANnel2 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH2_test_4000events",BIN,ON')
-    
-    print(dpo.query('*OPC?'))
-    print("Saved Channel 2 waveform")
-    time.sleep(1)
-    
-    dpo.write(':DISK:SAVE:WAVeform CHANnel3 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH3_%s",BIN,ON'%(runNumber))
-    #dpo.write(':DISK:SAVE:WAVeform CHANnel3 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH3_test_4000events",BIN,ON')
-    
-    print(dpo.query('*OPC?'))
-    print("Saved Channel 3 waveform")
-    time.sleep(1)
-    
-    dpo.write(':DISK:SAVE:WAVeform CHANnel4 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH4_%s",BIN,ON'%(runNumber))
-    #dpo.write(':DISK:SAVE:WAVeform CHANnel4 ,"C:\\Users\\Public\\Documents\\AgilentWaveform\\Wavenewscope_CH4_test_4000events",BIN,ON')
-    
-    print(dpo.query('*OPC?'))
-    print("Saved Channel 4 waveform")
+        print(dpo.query('*OPC?'))
+        print("Saved Channel {} waveform".format(channel))
+        time.sleep(1)
+
     
     tmp_file2 = open(run_log_path,"w")
     status = "ready"
@@ -305,12 +293,12 @@ if Status == ACQ_DONE :
     tmp_file2.write("\n")
     tmp_file2.close()
     
-    
     dpo.close()
+
 else : # Acquistion failed for some reason
-    print "Max wait time exceeded")    
-    print "Visually check scope for trigger, adjust if needed")
-    print "Properly closing the scope connection and exiting script")
+    print ("Max wait time exceeded")    
+    print ("Visually check scope for trigger, adjust if needed")
+    print ("Properly closing the scope connection and exiting script")
     
     # stop scop 
     dpo.query(":STOP;*OPC?")
