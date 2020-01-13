@@ -51,9 +51,9 @@ parser.add_argument('--trigCh',metavar='trigCh', type=str, default='AUX',help='t
 parser.add_argument('--trig',metavar='trig', type=float, default= -0.05, help='trigger value in V (default Aux (-0.05V))',required=False)
 parser.add_argument('--trigSlope',metavar='trigSlope', type=str, default= 'NEGative', help='trigger slope; positive(rise) or negative(fall)',required=False)
 
-parser.add_argument('--vScale1',metavar='vScale1', type=float, default= 0.5, help='Vertical scale, volts/div',required=False)
+parser.add_argument('--vScale1',metavar='vScale1', type=float, default= 1.0, help='Vertical scale, volts/div',required=False)
 parser.add_argument('--vScale2',metavar='vScale2', type=float, default= 0.2, help='Vertical scale, volts/div',required=False)
-parser.add_argument('--vScale3',metavar='vScale3', type=float, default= 0.2, help='Vertical scale, volts/div',required=False)
+parser.add_argument('--vScale3',metavar='vScale3', type=float, default= 1.0, help='Vertical scale, volts/div',required=False)
 parser.add_argument('--vScale4',metavar='vScale4', type=float, default= 0.2, help='Vertical scale, volts/div',required=False)
 
 parser.add_argument('--timeoffset',metavar='timeoffset', type=float, default=-130, help='Offset to compensate for trigger delay. This is the delta T between the center of the acquisition window and the trigger. (default for NimPlusX: -160 ns)',required=False)
@@ -88,10 +88,10 @@ vScale_ch3 =float(args.vScale3) # in Volts for division
 vScale_ch4 =float(args.vScale4) # in Volts for division
 
 #vertical position
-vPos_ch1 = -2  # in Divisions
-vPos_ch2 = 3  # in Divisions
-vPos_ch3 = 3  # in Divisions
-vPos_ch4 = 3  # in Divisions
+vPos_ch1 = 1  # in Divisions
+vPos_ch2 = 0  # in Divisions
+vPos_ch3 = -2  # in Divisions
+vPos_ch4 = -3  # in Divisions
 
 date = datetime.datetime.now()
 
@@ -272,7 +272,7 @@ if Status == ACQ_DONE :
 
     # save files
     # note: this scope is weird and can only save new waveforms to a usb 
-    scope_usb_path = "U:\\usb\\Waveforms"
+    #scope_usb_path = "/usb/Waveforms"
     print(dpo.query('*OPC?'))
     print("Ready to save all segments")
 
@@ -280,7 +280,8 @@ if Status == ACQ_DONE :
     for channel in channels: 
         dpo.write(':DISK:SEGMented ALL') ##save all segments (as opposed to just the current segment)
         time.sleep(0.5)
-        dpo.write(':DISK:SAVE:WAVeform CHANnel{} ,"{}\\Waveform_CH{}_{}", BIN,ON'.format(channel,scope_usb_path,channel,runNumber))
+        dpo.write(':SAVE:WAVeform CHANnel{} ,"/usb/Waveform_CH{}_{}", BIN,ON'.format(channel,channel,runNumber))
+        #dpo.write(':DISK:SAVE:WAVeform CHANnel{} ,"{}/Waveform_CH{}_{}", BIN,ON'.format(channel,scope_usb_path,channel,runNumber))
     
         print(dpo.query('*OPC?'))
         print("Saved Channel {} waveform".format(channel))
