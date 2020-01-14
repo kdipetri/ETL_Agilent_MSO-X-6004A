@@ -7,7 +7,7 @@ Python for Test and Measurement
 Requires VISA installed on Control PC
 'keysight.com/find/iosuite'
 Requires PyVISA to use VISA in Python
-'https://urldefense.proofpoint.com/v2/url?u=http-3A__PyVisa.sourceforge.net_PyVisa_&d=DwIGaQ&c=gRgGjJ3BkIsb5y6s49QqsA&r=WaY4b_RNg9kVxqHEJOskN4uGpB532--0MQsZGLeDquI&m=sZ3c_uxg2V1uez-xY72UbI8zasUvveMFR6e7DO6mViY&s=89WS20Diam8yPG4HxjODJ19AUgU3jUsn3JUs7DUy_dw&e= '
+'https://urldefense.proofpoint.com/v2/url?u=http-3A__PyVisa.sourceforge.net_PyVisa_&d=DwIGaQ&c=gRgGjJ3BkIsb5y6s49QqsA&r=WaY4b_RNg9kVxqHEJOskN4uGpB532--0MQsZGLeDquI&m=DShS7Q73R_pW_NS1p6GeFCn8KkFCpZISblb9A7s49mM&s=rrzBcNr-iey96_Vw5usvxjAlrnb7qpygcCUQ6pDPwG8&e= '
 
 Keysight IO Libraries 18.1.22713.0
 Anaconda Python 2.7.14 64 bit
@@ -32,25 +32,25 @@ Sample Application Files.
 # Import python modules - Not all of these are used in this program; provided
 # for reference
 import sys
-import pyvisa as visa # PyVisa info @ https://urldefense.proofpoint.com/v2/url?u=http-3A__PyVisa.readthedocs.io_en_stable_&d=DwIGaQ&c=gRgGjJ3BkIsb5y6s49QqsA&r=WaY4b_RNg9kVxqHEJOskN4uGpB532--0MQsZGLeDquI&m=sZ3c_uxg2V1uez-xY72UbI8zasUvveMFR6e7DO6mViY&s=5ljbMmeLNqu2u-pP3fqiDrtp8UPY6d8MF32OUFkcJdk&e= 
+import visa # PyVisa info @ https://urldefense.proofpoint.com/v2/url?u=http-3A__PyVisa.readthedocs.io_en_stable_&d=DwIGaQ&c=gRgGjJ3BkIsb5y6s49QqsA&r=WaY4b_RNg9kVxqHEJOskN4uGpB532--0MQsZGLeDquI&m=DShS7Q73R_pW_NS1p6GeFCn8KkFCpZISblb9A7s49mM&s=DHfDXheixAJJeGVe9R3VaAd3Tgp1Ofj7THiQsMzde5s&e= 
 import time
 import struct
 import numpy as np
 import scipy as sp
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 # =============================================================================
 # DEFINE CONSTANTS
 # =============================================================================
 
 # Number of Points to request
-USER_REQUESTED_POINTS = 4000000
+USER_REQUESTED_POINTS = 2000
 
 # Number of waveforms to acquire and transfer:
 NUMBER_WAVEFORMS = 1
 
 # Set format for output file to save waveform data:
-OUTPUT_FILE = 'BINARY'  # CSV, BINARY, BOTH, or NONE
+OUTPUT_FILE = 'NONE'  # CSV, BINARY, BOTH, or NONE
 
 # Load data from output file(s) back into Python:
 LOAD_SAVED_FILES = 'YES'  # 'YES' or 'NO'
@@ -59,23 +59,21 @@ LOAD_SAVED_FILES = 'YES'  # 'YES' or 'NO'
 VERBOSE_MODE = 'ON'  # 'ON' or 'OFF'
 
 # Initialization constants
-SCOPE_VISA_ADDRESS = "TCPIP::192.168.133.2::INSTR"  # MSOX6004A
 #SCOPE_VISA_ADDRESS = "USB0::0x2A8D::0x1770::MY56311141::0::INSTR"  # MSOX3104T
 #SCOPE_VISA_ADDRESS = "TCPIP0::192.168.1.110::inst0::INSTR"  # MSOX3104T
 #SCOPE_VISA_ADDRESS = 'TCPIP0::10.80.7.194::inst0::INSTR'  # 3kT COS
-#SCOPE_VISA_ADDRESS = 'TCPIP0::192.168.1.111::hislip0::INSTR'  # MSOX3054A
+SCOPE_VISA_ADDRESS = 'TCPIP0::192.168.1.111::hislip0::INSTR'  # MSOX3054A
 #SCOPE_VISA_ADDRESS = "USB0::0x2A8D::0x1797::CN57046145::0::INSTR"  # DSOX1102G
-#SCOPE_VISA_ADDRESS = "TCPIP0::192.168.1.113::inst0::INSTR"  # MSOX6004A
+#SCOPE_VISA_ADDRESS = "TCPIP0::192.168.0.113::inst0::INSTR"  # MSOX6004A
 #SCOPE_VISA_ADDRESS = "USB0::0x0957::0x1790::MY56050705::0::INSTR"  # MSOX6004A
 #SCOPE_VISA_ADDRESS = "msox3104t"  # This is a VISA alias in Connection Expert
 #SCOPE_VISA_ADDRESS = 'TCPIP0::192.168.0.114::inst0::INSTR'  # DSO5054A
 
-GLOBAL_TIMEOUT = 100000  # IO timeout in milliseconds
+GLOBAL_TIMEOUT = 15000  # IO timeout in milliseconds
 
 # Define save Locations
 BASE_FILE_NAME = ""
-BASE_DIRECTORY = "/home/daq/ETL_Agilent_MSO-X-6004A/Acquisition/tmp_output/"
-#BASE_DIRECTORY = "C:\\Users\\Public\\"
+BASE_DIRECTORY = "C:\\Users\\Public\\"
 
 # =============================================================================
 # Misc tasks
@@ -88,8 +86,7 @@ waveforms = False
 # Connect and initialize scope
 # =============================================================================
 
-rm = visa.ResourceManager()
-#rm = visa.ResourceManager('C:\\Windows\\System32\\visa32.dll')
+rm = visa.ResourceManager('C:\\Windows\\System32\\visa32.dll')
 
 # Open Connection
 
@@ -172,9 +169,6 @@ KsInfiniiVisionX.write(":WAVeform:UNSigned 0")
 # Determine Acquisition Type to set points mode properly
 
 ACQ_TYPE = str(KsInfiniiVisionX.query(":ACQuire:TYPE?")).strip("\n")
-if VERBOSE_MODE == "ON":
-    print('Acquisition type {}'.format(ACQ_TYPE))
-
 if ACQ_TYPE == "AVER" or ACQ_TYPE == "HRES":
     POINTS_MODE = "NORMal"
 else:
@@ -183,7 +177,6 @@ else:
 KsInfiniiVisionX.write(":WAVeform:SOURce CHANnel" + str(FIRST_CHANNEL_ON))
 KsInfiniiVisionX.write(":WAVeform:POINts MAX")
 KsInfiniiVisionX.write(":WAVeform:POINts:MODE " + str(POINTS_MODE))
-KsInfiniiVisionX.write(":WAVeform:SEGMented:ALL ON")
 
 max_points_available = int(KsInfiniiVisionX.query(":WAVeform:POINts?"))
 
@@ -197,17 +190,12 @@ if USER_REQUESTED_POINTS > max_points_available or ACQ_TYPE == "PEAK":
     USER_REQUESTED_POINTS = max_points_available
 
 KsInfiniiVisionX.write(":WAVeform:POINts " + str(USER_REQUESTED_POINTS))
-KsInfiniiVisionX.query('*OPC?')
 
-number_segments = int(KsInfiniiVisionX.query('WAVeform:SEGMented:COUNt?'))
-number_points_per_segment = int(KsInfiniiVisionX.query(":WAVeform:POINts?"))
-number_points_to_retrieve = number_segments * number_points_per_segment
+number_points_to_retrieve = int(KsInfiniiVisionX.query(":WAVeform:POINts?"))
 
 if VERBOSE_MODE == 'ON':
     print('Number of points requested: %d' % USER_REQUESTED_POINTS)
     print('Number of points available: %d' % max_points_available)
-    print('Number of segments :%d' % number_segments)
-    print('Number of points per segment :%d' % number_points_per_segment)
     print('Number of points to retrieve: %d\n' % number_points_to_retrieve)
 
 Pre = KsInfiniiVisionX.query(":WAVeform:PREamble?").split(',')
@@ -229,8 +217,6 @@ if WFORM == "BYTE":
     FORMAT_MULTIPLIER = 1
 else: #WFORM == "WORD"
     FORMAT_MULTIPLIER = 2
-if VERBOSE_MODE == "ON":
-    print("Waveform Format: {}".format(WFORM))
 
 if ACQ_TYPE == "PEAK":
     POINTS_MULTIPLIER = 2
@@ -256,22 +242,9 @@ if VERBOSE_MODE == 'ON':
 start_time = time.clock()  # Time acquiring waveforms and importing the data
 
 while i < NUMBER_WAVEFORMS:
-
-    print(i)
-    KsInfiniiVisionX.write("*CLS")
-    KsInfiniiVisionX.write(":SINGle")
-    #KsInfiniiVisionX.write(':DIGitize CHANnel1')
-    #KsInfiniiVisionX.query(':DIGitize CHANnel1')
-    KsInfiniiVisionX.query('*OPC?')
-    print("Done acquiring")
-    KsInfiniiVisionX.write(":WAVeform:SOURce CHANnel1")
-    print("Waveform source is channel 1")
-    #data_list = KsInfiniiVisionX.query_binary_values(":Waveform:DATA?", "h", False) 
-    #print("Done transfering data")
-    #waveforms[:, i] = np.array(data_list)
-    #waveforms[:, i] = np.array(KsInfiniiVisionX.query_binary_values(':WAVeform:SOURce CHANnel1;:Waveform:DATA?', "h", False))
-    waveforms[:, i] = np.array(KsInfiniiVisionX.query_binary_values(':WAVeform:SOURce CHANnel1;DATA?', "h", False))
-    print("Done transfering data")
+    KsInfiniiVisionX.query(':DIG;*OPC?')
+    waveforms[:, i] = np.array(KsInfiniiVisionX.query_binary_values(
+            ':WAVeform:SOURce CHANnel1;DATA?', "h", False))
     i += 1
 
 acquisition_time = time.clock() - start_time

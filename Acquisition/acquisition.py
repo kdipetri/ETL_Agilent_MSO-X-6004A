@@ -276,10 +276,11 @@ if Status == ACQ_DONE :
     print(dpo.query('*OPC?'))
     print("Ready to save all segments")
 
+    dpo.write(':DISK:SEGMented ALL') ##save all segments (as opposed to just the current segment)
+    time.sleep(0.5)
+
     channels = [1,2,3,4]
     for channel in channels: 
-        dpo.write(':DISK:SEGMented ALL') ##save all segments (as opposed to just the current segment)
-        time.sleep(0.5)
         dpo.write(':SAVE:WAVeform CHANnel{} ,"/usb/Waveform_CH{}_{}", BIN,ON'.format(channel,channel,runNumber))
         #dpo.write(':DISK:SAVE:WAVeform CHANnel{} ,"{}/Waveform_CH{}_{}", BIN,ON'.format(channel,scope_usb_path,channel,runNumber))
     
