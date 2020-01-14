@@ -7,7 +7,7 @@
 # Requires VISA installed on Control PC
 # 'keysight.com/find/iosuite'
 # Requires PyVISA to use VISA in Python
-# 'https://urldefense.proofpoint.com/v2/url?u=http-3A__pyvisa.sourceforge.net_pyvisa_&d=DwIGaQ&c=gRgGjJ3BkIsb5y6s49QqsA&r=WaY4b_RNg9kVxqHEJOskN4uGpB532--0MQsZGLeDquI&m=DShS7Q73R_pW_NS1p6GeFCn8KkFCpZISblb9A7s49mM&s=ZJNS0SPUjUrxdDNqBVOB5evr-r7YOA-mOTn47_zaVxY&e= '
+# 'https://urldefense.proofpoint.com/v2/url?u=http-3A__pyvisa.sourceforge.net_pyvisa_&d=DwIGaQ&c=gRgGjJ3BkIsb5y6s49QqsA&r=WaY4b_RNg9kVxqHEJOskN4uGpB532--0MQsZGLeDquI&m=nbwL3wrWa9-M582buiRe_jYlTK6MHTy0ndiB1r0bUBM&s=fI6YxZ9VTlm486rn-3pHfMbvAGdnLEn0PLw-xKkpIaQ&e= '
 
 ## Keysight IO Libraries 17.1.19xxx
 ## Anaconda Python 2.7.7 64 bit
@@ -37,7 +37,7 @@ import time
 import struct
 import numpy as np
 import scipy as sp
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 ##############################################################################################################################################################################
 ##############################################################################################################################################################################
@@ -72,7 +72,7 @@ import scipy as sp
 ## This script should work for all InfiniiVision and InfiniiVision-X oscilloscopes:
 ## DSO5000A, DSO/MSO6000A/L, DSO/MSO7000A/B, DSO/MSO-X2000A, DSO/MSO-X3000A/T, DSO/MSO-X4000A, DSO/MSO-X6000A
 ## Tested against MSOX3104A w/ Firmware System Version 2.39, and MSO6054A w/ Systerm Version 6.20.0000
-## segmented memory video: https://urldefense.proofpoint.com/v2/url?u=https-3A__www.youtube.com_watch-3Fv-3DriYGdiNG2PU&d=DwIGaQ&c=gRgGjJ3BkIsb5y6s49QqsA&r=WaY4b_RNg9kVxqHEJOskN4uGpB532--0MQsZGLeDquI&m=DShS7Q73R_pW_NS1p6GeFCn8KkFCpZISblb9A7s49mM&s=9KL69qJp1H1CbyOTXIOrjrViVMtHVQcN2kpuY_tz-mU&e= 
+## segmented memory video: https://urldefense.proofpoint.com/v2/url?u=https-3A__www.youtube.com_watch-3Fv-3DriYGdiNG2PU&d=DwIGaQ&c=gRgGjJ3BkIsb5y6s49QqsA&r=WaY4b_RNg9kVxqHEJOskN4uGpB532--0MQsZGLeDquI&m=nbwL3wrWa9-M582buiRe_jYlTK6MHTy0ndiB1r0bUBM&s=UQE2dpsK_Y9q0Rp9MK8WGIThnB307NSaSLSb0gvAtqI&e= 
 ## NO ERROR CHECKING OR HANDLING IS INCLUDED
 
 ## INSTRUCTIONS
@@ -101,9 +101,10 @@ import scipy as sp
 ##############################################################################################################################################################################
 
 ## Initialization constants
-SCOPE_VISA_ADDRESS = "TCPIP::192.168.133.2::INSTR"
-#SCOPE_VISA_ADDRESS = "TCPIP0::192.168.1.113::inst0::INSTR" # Get this from Keysight IO Libraries Connection Expert #Note: sockets are not supported in this revision of the script, and pyVisa 1.6.3 does not support HiSlip
-GLOBAL_TOUT =  10000 # IO time out in milliseconds
+#VISA_ADDRESS = "TCPIP0::10.72.62.23::INSTR" # Get this from Keysight IO Libraries Connection Expert #Note: sockets are not supported in this revision of the script, and pyVisa 1.6.3 does not support HiSlip
+SCOPE_VISA_ADDRESS = "TCPIP::192.168.133.2::INSTR"  # MSOX6004A
+
+GLOBAL_TOUT =  50000 # IO time out in milliseconds
 
 ## Pull waveform data?
 GET_WFM_DATA = "YES" # "YES" or "NO" ; Automatically determines which analog channels are on, and grabs the waveform data for each segment.
@@ -128,8 +129,10 @@ SAVE_TTS_SEPARATELY = "YES" # "YES" or "N0" ; creates a separate file with only 
 ## Save Locations
 BASE_FILE_NAME = "my_data"
 BASE_DIRECTORY = "/home/daq/ETL_Agilent_MSO-X-6004A/Acquisition/tmp_output/"
-#BASE_DIRECTORY = "C:\\Users\\Public\\"
     ## IMPORTANT NOTE:  This script WILL overwrite previously saved files!
+
+## Output file format 
+OUTPUT_FILE = "BOTH" #  CSV, BINARY, BOTH, or NONE 
 
 ##############################################################################################################################################################################
 ##############################################################################################################################################################################
@@ -148,7 +151,6 @@ print "Script is running.  This may take a while..."
 ## Define VISA Resource Manager & Install directory
 ## This directory will need to be changed if VISA was installed somewhere else.
 rm = visa.ResourceManager() # this uses pyvisa
-#rm = visa.ResourceManager('C:\\Windows\\System32\\visa32.dll') # this uses pyvisa
 ## This is more or less ok too: rm = visa.ResourceManager('C:\\Program Files (x86)\\IVI Foundation\\VISA\\WinNT\\agvisa\\agbin\\visa32.dll')
 ## In fact, it is generally not needed to call it explicitly
 ## rm = visa.ResourceManager()
@@ -164,18 +166,22 @@ except Exception:
 ## Set Global Timeout
 ## This can be used wherever, but local timeouts are used for Arming, Triggering, and Finishing the acquisition... Thus it mostly handles IO timeouts
 KsInfiniiVisionX.timeout = GLOBAL_TOUT
-print(KsInfiniiVisionX.query('*idn?')
 
 ## Clear the instrument bus
 KsInfiniiVisionX.clear()
 
-## DO NOT RESET THE SCOPE!
+## Program assumes the scope is already set up to capture the desired
+## number of segments.
+
+opc = KsInfiniiVisionX.query(":DIGITIZE CHANNEL1;*OPC?")
 
 ##############################################################################################################################################################################
 ##############################################################################################################################################################################
 ## Flip through segments, get time tags and make measurements
 ##############################################################################################################################################################################
 ##############################################################################################################################################################################
+
+
 
 ## Find number of segments actually acquired
 NSEG = int(KsInfiniiVisionX.query(":WAVeform:SEGMented:COUNt?"))
@@ -203,6 +209,7 @@ if DO_MEASUREMENTS == "YES":
 ## Flip through segments...
 for n in range(1,NSEG+1,1): ## Python indices start at 0, segments start at 1
 
+    print("Acquiring segment {}".format(n))
     KsInfiniiVisionX.write(":ACQuire:SEGMented:INDex " + str(n)) # Go to segment n
 
     Tags[n-1] = KsInfiniiVisionX.query(":WAVeform:SEGMented:TTAG?") # Get time tag of segment n ; always get time tags
@@ -355,9 +362,9 @@ for n in range(1,NSEG+1,1): ## Python indices start at 0, segments start at 1
             del ch, each_value
 
             ## Setup data export
-            KsInfiniiVisionX.write(":WAVeform:FORMat WORD")  # 16 bit word format...
-            KsInfiniiVisionX.write(":WAVeform:BYTeorder LSBFirst") # Explicitly set this to avoid confusion
-            KsInfiniiVisionX.write(":WAVeform:UNSigned 0") # Explicitly set this to avoid confusion
+            KsInfiniiVisionX.write(":WAVeform:FORMat BYTE")  # 16 bit word format...
+            #KsInfiniiVisionX.write(":WAVeform:BYTeorder LSBFirst") # Explicitly set this to avoid confusion
+            #KsInfiniiVisionX.write(":WAVeform:UNSigned 0") # Explicitly set this to avoid confusion
             KsInfiniiVisionX.write(":WAVeform:SOURce CHANnel" + str(FIRST_CHANNEL_ON))  # Set waveform source to any enabled channel, here the FIRST_CHANNEL_ON
             KsInfiniiVisionX.write(":WAVeform:POINts MAX") # Set number of points to max possible for any InfiniiVision; ensures all are available
                 ## If using :WAVeform:POINts MAX, be sure to do this BEFORE setting the :WAVeform:POINts:MODE as it will switch it to MAX
@@ -394,6 +401,7 @@ for n in range(1,NSEG+1,1): ## Python indices start at 0, segments start at 1
         i  = 0 # index of Wav_data
         for each_value in  CHS_ON:
             if each_value == 1:
+                print("Channel Number {} : Index of Wav data {} : Segment {}".format(ch,i,n))
                 ## Gets the waveform in 16 bit WORD format
                 Wav_Data[i,:,n-1] = np.array(KsInfiniiVisionX.query_binary_values(':WAVeform:SOURce CHANnel' + str(ch) + ';DATA?', "h", False))
                 ## Scales the waveform
@@ -433,7 +441,8 @@ if GET_WFM_DATA == "YES":
         Wav_Data = np.dstack((Wav_Data,Ave_Data))
         del Ave_Data
 
-    segment_indices = np.linspace(1,NSEG,NSEG, dtype = int)
+    segment_indices = np.linspace(1,NSEG,NSEG)
+    #segment_indices = np.linspace(1,NSEG,NSEG, dtype = int)
 
     i = 0
     ch = 1
@@ -455,7 +464,8 @@ if GET_WFM_DATA == "YES":
     del each_value, ch, filehandle, filename, segment_indices
 
 if SAVE_TTS_SEPARATELY == "YES":
-    segment_indices = np.linspace(1,NSEG,NSEG, dtype = int)
+    segment_indices = np.linspace(1,NSEG,NSEG)
+    #segment_indices = np.linspace(1,NSEG,NSEG, dtype = int)
     TTs_v_Index = np.zeros([NSEG,2])
     TTs_v_Index[:,0] = np.atleast_2d(segment_indices)
     TTs_v_Index[:,1] = np.atleast_2d(Tags)

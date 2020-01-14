@@ -70,7 +70,7 @@ SCOPE_VISA_ADDRESS = "TCPIP::192.168.133.2::INSTR"  # MSOX6004A
 #SCOPE_VISA_ADDRESS = "msox3104t"  # This is a VISA alias in Connection Expert
 #SCOPE_VISA_ADDRESS = 'TCPIP0::192.168.0.114::inst0::INSTR'  # DSO5054A
 
-GLOBAL_TIMEOUT = 100000  # IO timeout in milliseconds
+GLOBAL_TIMEOUT = 500000  # IO timeout in milliseconds
 
 # Define save Locations
 BASE_FILE_NAME = ""
