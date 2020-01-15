@@ -111,7 +111,7 @@ GET_WFM_DATA = "YES" # "YES" or "NO" ; Automatically determines which analog cha
     ## If you do not want to pull that channel data, turn it off, though it must be on for a measurement.
     ## One time axis is created for ALL segments, so each segment is referenced to its own trigger.
     ## One file per analog channel is created, with every segment, time tags, and segment indices.
-DO_AVERAGE = "NO" # "YES" or "NO" ; create an averaged waveform for each analog channel.  It is placed in the final column of the resulting data file..
+#DO_AVERAGE = "NO" # "YES" or "NO" ; create an averaged waveform for each analog channel.  It is placed in the final column of the resulting data file..
     ## This is not done on-board the scope.  It is done in this script.
 
 ## Perform and get measurements?
@@ -121,10 +121,6 @@ N_MEASUREMENTS = 4 # Number of measurements to make per segment, an integer
 MeasHeader = "VMin CH1 (V),Vpeak-peak CH3 (V),Frequency CH1 (Hz),Vavg Ch1 (V)" # Example Header = "M1 (units),M2 (units),M3 (units),..."
     ## Segment Index, Segment Time Tag (s) will automatically be added
 
-## Save time tags to separate file?
-SAVE_TTS_SEPARATELY = "YES" # "YES" or "N0" ; creates a separate file with only time tags and segment index
-    ## Note that both saving waveform data and measurements will also save time tags in those files
-    ## This can be used to get ONLY time tags.
 
 ## Save Locations
 BASE_FILE_NAME = "my_data"
@@ -132,7 +128,8 @@ BASE_DIRECTORY = "/home/daq/ETL_Agilent_MSO-X-6004A/Acquisition/tmp_output/"
     ## IMPORTANT NOTE:  This script WILL overwrite previously saved files!
 
 ## Output file format 
-OUTPUT_FILE = "BOTH" #  CSV, BINARY, BOTH, or NONE 
+OUTPUT_FILE = "CSV" #  CSV, BINARY, BOTH, or NONE 
+OUTPUT_FILE = "BINARY" #  CSV, BINARY, BOTH, or NONE 
 
 ##############################################################################################################################################################################
 ##############################################################################################################################################################################
@@ -362,9 +359,10 @@ for n in range(1,NSEG+1,1): ## Python indices start at 0, segments start at 1
             del ch, each_value
 
             ## Setup data export
-            KsInfiniiVisionX.write(":WAVeform:FORMat BYTE")  # 16 bit word format...
-            #KsInfiniiVisionX.write(":WAVeform:BYTeorder LSBFirst") # Explicitly set this to avoid confusion
-            #KsInfiniiVisionX.write(":WAVeform:UNSigned 0") # Explicitly set this to avoid confusion
+            #KsInfiniiVisionX.write(":WAVeform:FORMat BYTE")  # needs finesing 
+            KsInfiniiVisionX.write(":WAVeform:FORMAT WORD") # 16 bit word format...
+            KsInfiniiVisionX.write(":WAVeform:BYTeorder LSBFirst") # Explicitly set this to avoid confusion
+            KsInfiniiVisionX.write(":WAVeform:UNSigned 0") # Explicitly set this to avoid confusion
             KsInfiniiVisionX.write(":WAVeform:SOURce CHANnel" + str(FIRST_CHANNEL_ON))  # Set waveform source to any enabled channel, here the FIRST_CHANNEL_ON
             KsInfiniiVisionX.write(":WAVeform:POINts MAX") # Set number of points to max possible for any InfiniiVision; ensures all are available
                 ## If using :WAVeform:POINts MAX, be sure to do this BEFORE setting the :WAVeform:POINts:MODE as it will switch it to MAX
@@ -436,45 +434,63 @@ if DO_MEASUREMENTS == "YES":
 ## Save waveform data
 if GET_WFM_DATA == "YES":
 
-    if DO_AVERAGE == "YES":
-        Ave_Data = np.mean(Wav_Data,axis = 2)
-        Wav_Data = np.dstack((Wav_Data,Ave_Data))
-        del Ave_Data
+    #if DO_AVERAGE == "YES":
+    #    Ave_Data = np.mean(Wav_Data,axis = 2)
+    #    Wav_Data = np.dstack((Wav_Data,Ave_Data))
+    #    del Ave_Data
 
-    segment_indices = np.linspace(1,NSEG,NSEG)
-    #segment_indices = np.linspace(1,NSEG,NSEG, dtype = int)
+    if OUTPUT_FILE == "CSV" or OUTPUT_FILE == "BOTH": 
 
-    i = 0
-    ch = 1
-    for each_value in CHS_ON:
-        if each_value == 1:
-            filename = BASE_DIRECTORY + BASE_FILE_NAME + "_Channel" + str(ch) + ".csv"
-            with open(filename, 'w') as filehandle:
-                filehandle.write("Timestamp (s):,")
-                np.savetxt(filehandle, np.atleast_2d(Tags), delimiter=',')
-                filehandle.write("Segment Index:,")
-                np.savetxt(filehandle, np.atleast_2d(segment_indices), delimiter=',')
-                if DO_AVERAGE == "YES":
-                    filehandle.write("Time (s), Waveforms... Final column is averaged.\n")
-                else:
+        segment_indices = np.linspace(1,NSEG,NSEG)
+        segment_indices = [ int(index) for index in segment_indices ] 
+        #segment_indices = np.linspace(1,NSEG,NSEG, dtype = int)
+
+        i = 0
+        ch = 1
+        for each_value in CHS_ON:
+            if each_value == 1:
+                filename = BASE_DIRECTORY + BASE_FILE_NAME + "_Channel" + str(ch) + ".csv"
+                with open(filename, 'w') as filehandle:
+                    filehandle.write("Timestamp (s):,")
+                    np.savetxt(filehandle, np.atleast_2d(Tags), delimiter=',')
+                    filehandle.write("Segment Index:,")
+                    np.savetxt(filehandle, np.atleast_2d(segment_indices), delimiter=',')
+                    #if DO_AVERAGE == "YES":
+                    #    filehandle.write("Time (s), Waveforms... Final column is averaged.\n")
+                    #else:
                     filehandle.write("Time (s), Waveforms...\n")
-                np.savetxt(filehandle, np.insert(Wav_Data[i,:,:],0,DataTime,axis=1), delimiter=',')
-            i +=1
-        ch +=1
-    del each_value, ch, filehandle, filename, segment_indices
+                    np.savetxt(filehandle, np.insert(Wav_Data[i,:,:],0,DataTime,axis=1), delimiter=',')
+                i +=1
+            ch +=1
+        del each_value, ch, filehandle, filename, segment_indices
 
-if SAVE_TTS_SEPARATELY == "YES":
-    segment_indices = np.linspace(1,NSEG,NSEG)
-    #segment_indices = np.linspace(1,NSEG,NSEG, dtype = int)
-    TTs_v_Index = np.zeros([NSEG,2])
-    TTs_v_Index[:,0] = np.atleast_2d(segment_indices)
-    TTs_v_Index[:,1] = np.atleast_2d(Tags)
 
-    filename = BASE_DIRECTORY + BASE_FILE_NAME + "_TimeTags.csv"
-    with open(filename, 'w') as filehandle:
-        filehandle.write("Segment Index,Timestamp (s)\n")
-        np.savetxt(filehandle, TTs_v_Index, delimiter=',')
-    del filehandle, filename, segment_indices
+
+    if OUTPUT_FILE == "BINARY" or OUTPUT_FILE == "BOTH": # save NPY file
+
+        print('Saving waveform(s) in binary (NumPy) format...' )
+
+        start_time = time.clock()  # Time saving waveform data to a numpy file
+        i = 0
+        ch = 1
+        for each_value in CHS_ON:
+            if each_value == 1:
+
+                header = "Time (s),Channel 1 (V)\n"
+                filename = BASE_DIRECTORY + BASE_FILE_NAME + "_Channel" + str(ch) + ".csv"
+                npy_file = filename + '.npy'
+
+                with open(npy_file, 'wb') as filehandle:
+                    np.save(filehandle, np.insert(Wav_Data[i,:,:],0,DataTime,axis=1)) 
+                    #np.save(filehandle, np.insert(waveforms, 0, time_axis, axis=1))
+                    npy_saving_time = time.clock() - start_time
+
+                print('Done saving' + '    ' + npy_file)
+                print('This took {:.3f} seconds '.format(npy_saving_time)
+                          )
+                i +=1
+            ch +=1
+        del each_value, ch, filehandle, filename 
 
 del n, BASE_DIRECTORY, BASE_FILE_NAME, MeasHeader
 
