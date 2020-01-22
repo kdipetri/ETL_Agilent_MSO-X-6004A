@@ -32,48 +32,15 @@
 
 ## Import python modules - Not all of these are used in this program; provided for reference
 import sys
+import argparse
 import pyvisa as visa
 import time
 import struct
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
+import datetime
 
-##############################################################################################################################################################################
-##############################################################################################################################################################################
-## Intro, general comments, and instructions
-##############################################################################################################################################################################
-##############################################################################################################################################################################
-
-## This example program is provided as is and without support. Keysight is not responsible for modifications.
-## Standard Python style is not followed to allow for easier reading by non-Python programmers.
-
-## Keysight IO Libraries 17.1.19xxx was used.
-## Anaconda Python 2.7.7 64 bit is used
-## pyvisa 1.8 is used
-## Windows 7 Enterprise, 64 bit (has implications for time.clock if ported to unix type machine, use time.time instead)
-
-## HiSlip and Socket connections not supported
-
-## DESCRIPTION OF FUNCTIONALITY
-## This script can get waveforms, and measurements from analog channels for segmented memory already acquired on an InfiniiVision Scope.  It can also get time tags and produce an averaged segment for each analog channel.
-## This script assumes the user has already acquired segments manually on an InfiniiVision or InfiniiVision-X oscilloscope.  A license may be needed for segmented memory.
-## The user must make some trivial edits as per below instructions.
-## The script figures out how many segments were actually acquired, flips through them, gathers the:
-    ## time tags and/or
-    ## desired measurement results that the user has edited in and/or
-    ## waveforms from all enabled analog channels.
-## Saves results to a csv file(s), which is openable in Microsoft XL and just about any other software…
-## Script defaults should work for any 4 channel InfiniiVision or InfiniiVision-X oscilloscope with:
-    ## Channels 1 & 3 hooked to the probe compensation port with a passive probe
-    ## Channels 1 & 3 on, and AutoScaled
-    ## Results placed in C:\Users\Public\ w/ file name my_data.csv (editable)
-## User enables segmented memory and acquires a few segments
-## This script should work for all InfiniiVision and InfiniiVision-X oscilloscopes:
-## DSO5000A, DSO/MSO6000A/L, DSO/MSO7000A/B, DSO/MSO-X2000A, DSO/MSO-X3000A/T, DSO/MSO-X4000A, DSO/MSO-X6000A
-## Tested against MSOX3104A w/ Firmware System Version 2.39, and MSO6054A w/ Systerm Version 6.20.0000
-## segmented memory video: https://urldefense.proofpoint.com/v2/url?u=https-3A__www.youtube.com_watch-3Fv-3DriYGdiNG2PU&d=DwIGaQ&c=gRgGjJ3BkIsb5y6s49QqsA&r=WaY4b_RNg9kVxqHEJOskN4uGpB532--0MQsZGLeDquI&m=nbwL3wrWa9-M582buiRe_jYlTK6MHTy0ndiB1r0bUBM&s=UQE2dpsK_Y9q0Rp9MK8WGIThnB307NSaSLSb0gvAtqI&e= 
-## NO ERROR CHECKING OR HANDLING IS INCLUDED
 
 ## INSTRUCTIONS
 ## 1. Setup oscilloscope and acquire segments manually, wait until acquisition is done
@@ -94,14 +61,7 @@ import matplotlib.pyplot as plt
     ## this is taken care of.  What IS NOT taken care of is bad measurements commands.  Try them out in Keysight Connection Expert or Command Expert first
 ## 8. ALWAYS DO SOME TEST RUNS!!!!! and ensure you are getting what you want and it is later usable!!!!!
 
-##############################################################################################################################################################################
-##############################################################################################################################################################################
-## DEFINE CONSTANTS
-##############################################################################################################################################################################
-##############################################################################################################################################################################
-
 ## Initialization constants
-#VISA_ADDRESS = "TCPIP0::10.72.62.23::INSTR" # Get this from Keysight IO Libraries Connection Expert #Note: sockets are not supported in this revision of the script, and pyVisa 1.6.3 does not support HiSlip
 SCOPE_VISA_ADDRESS = "TCPIP::192.168.133.2::INSTR"  # MSOX6004A
 
 GLOBAL_TOUT =  50000 # IO time out in milliseconds
@@ -114,22 +74,84 @@ GET_WFM_DATA = "YES" # "YES" or "NO" ; Automatically determines which analog cha
 #DO_AVERAGE = "NO" # "YES" or "NO" ; create an averaged waveform for each analog channel.  It is placed in the final column of the resulting data file..
     ## This is not done on-board the scope.  It is done in this script.
 
-## Perform and get measurements?
-DO_MEASUREMENTS = "NO" # "YES" or "NO" ; Performs measurements for each segment.  Measurements are to be set up in
-    ## this script, and not on the scope.  This allows more total flexibility and unlimited  measurements per segment.
-N_MEASUREMENTS = 4 # Number of measurements to make per segment, an integer
-MeasHeader = "VMin CH1 (V),Vpeak-peak CH3 (V),Frequency CH1 (Hz),Vavg Ch1 (V)" # Example Header = "M1 (units),M2 (units),M3 (units),..."
-    ## Segment Index, Segment Time Tag (s) will automatically be added
+
+"""#################ARGUMENT PARSING#################"""
+
+parser = argparse.ArgumentParser(description='Run info.')
+
+parser.add_argument('--numEvents',metavar='Events', type=str,default = 500, help='numEvents (default 500)',required=True)
+parser.add_argument('--runNumber',metavar='runNumber', type=str,default = -1, help='runNumber (default -1)',required=False)
+parser.add_argument('--sampleRate',metavar='sampleRate', type=str,default = 6, help='Sampling rate (default 6)',required=False)
+parser.add_argument('--horizontalWindow',metavar='horizontalWindow', type=str,default = 125, help='horizontal Window (default 125)',required=False)
+# parser.add_argument('--numPoints',metavar='Points', type=str,default = 500, help='numPoints (default 500)',required=True)
+parser.add_argument('--trigCh',metavar='trigCh', type=str, default='AUX',help='trigger Channel (default Aux (-0.1V))',required=False)
+parser.add_argument('--trig',metavar='trig', type=float, default= -0.05, help='trigger value in V (default Aux (-0.05V))',required=False)
+parser.add_argument('--trigSlope',metavar='trigSlope', type=str, default= 'NEGative', help='trigger slope; positive(rise) or negative(fall)',required=False)
+
+parser.add_argument('--vScale1',metavar='vScale1', type=float, default= 1.0, help='Vertical scale, volts/div',required=False)
+parser.add_argument('--vScale2',metavar='vScale2', type=float, default= 0.2, help='Vertical scale, volts/div',required=False)
+parser.add_argument('--vScale3',metavar='vScale3', type=float, default= 1.0, help='Vertical scale, volts/div',required=False)
+parser.add_argument('--vScale4',metavar='vScale4', type=float, default= 0.2, help='Vertical scale, volts/div',required=False)
+
+parser.add_argument('--timeoffset',metavar='timeoffset', type=float, default=-130, help='Offset to compensate for trigger delay. This is the delta T between the center of the acquisition window and the trigger. (default for NimPlusX: -160 ns)',required=False)
 
 
-## Save Locations
-BASE_FILE_NAME = "my_data"
+args = parser.parse_args()
+trigCh = str(args.trigCh) 
+runNumberParam = int(args.runNumber) 
+if trigCh != "AUX": trigCh = 'CHANnel'+trigCh
+trigLevel = float(args.trig)
+triggerSlope = args.trigSlope
+timeoffset = float(args.timeoffset)*1e-9
+print "timeoffset is ",timeoffset
+
+# helpful directory info
+this_package="/home/daq/ETL_Agilent_MSO-X-6004A/Acquisition"
+
+"""#################TO CONFIGURE INSTRUMENT#################"""
+# variables for individual settings
+hScale = float(args.horizontalWindow)*1e-9
+samplingrate = float(args.sampleRate)*1e+9
+numEvents = int(args.numEvents) # number of events for each file
+numPoints = samplingrate*hScale
+print("Sampling Rate : {}".format(samplingrate))
+print("NumEvents : {}".format(numEvents))
+print("NumPoints : {}".format(numPoints))
+
+#vertical scale
+vScale_ch1 =float(args.vScale1) # in Volts for division
+vScale_ch2 =float(args.vScale2) # in Volts for division
+vScale_ch3 =float(args.vScale3) # in Volts for division
+vScale_ch4 =float(args.vScale4) # in Volts for division
+
+#vertical position
+vPos_ch1 = 1  # in Divisions
+vPos_ch2 = 0  # in Divisions
+vPos_ch3 = -2  # in Divisions
+vPos_ch4 = -3  # in Divisions
+
+date = datetime.datetime.now()
+
+## File Saving Information 
+
+## Increment the last runNumber by 1
+if runNumberParam == -1:
+    #RunNumberFile = '/home/daq/JARVIS/AutoPilot/otsdaq_runNumber.txt'
+    RunNumberFile = "{}/runNumber.txt".format(this_package)
+    with open(RunNumberFile) as file:
+        runNumber = int(file.read())
+    print('######## Starting RUN {} ########\n'.format(runNumber))
+    print('---------------------\n')
+    print(date)
+    print('---------------------\n')
+
+else: runNumber = runNumberParam
+
 BASE_DIRECTORY = "/home/daq/ETL_Agilent_MSO-X-6004A/Acquisition/tmp_output/"
-    ## IMPORTANT NOTE:  This script WILL overwrite previously saved files!
+BASE_FILE_NAME = "run_{}".format(runNumber)
 
 ## Output file format 
-OUTPUT_FILE = "CSV" #  CSV, BINARY, BOTH, or NONE 
-OUTPUT_FILE = "BINARY" #  CSV, BINARY, BOTH, or NONE 
+OUTPUT_FILE = "BOTH" #  CSV, BINARY, BOTH, or NONE 
 
 ##############################################################################################################################################################################
 ##############################################################################################################################################################################
@@ -146,11 +168,7 @@ print "Script is running.  This may take a while..."
 ##############################################################################################################################################################################
 
 ## Define VISA Resource Manager & Install directory
-## This directory will need to be changed if VISA was installed somewhere else.
 rm = visa.ResourceManager() # this uses pyvisa
-## This is more or less ok too: rm = visa.ResourceManager('C:\\Program Files (x86)\\IVI Foundation\\VISA\\WinNT\\agvisa\\agbin\\visa32.dll')
-## In fact, it is generally not needed to call it explicitly
-## rm = visa.ResourceManager()
 
 ## Open Connection
 ## Define & open the scope by the VISA address ; # This uses PyVisa
@@ -167,10 +185,19 @@ KsInfiniiVisionX.timeout = GLOBAL_TOUT
 ## Clear the instrument bus
 KsInfiniiVisionX.clear()
 
+
+# Configuring things....
+KsInfiniiVisionX.write('ch1:bandwidth full')
+KsInfiniiVisionX.write('ch2:bandwidth full')
+KsInfiniiVisionX.write('ch3:bandwidth full')
+KsInfiniiVisionX.write('ch4:bandwidth full')
+
 ## Program assumes the scope is already set up to capture the desired
 ## number of segments.
 
-opc = KsInfiniiVisionX.query(":DIGITIZE CHANNEL1;*OPC?")
+
+opc = KsInfiniiVisionX.query(":DIGITIZE;*OPC?")
+#opc = KsInfiniiVisionX.query(":DIGITIZE CHANNEL1;*OPC?")
 
 ##############################################################################################################################################################################
 ##############################################################################################################################################################################
@@ -199,9 +226,6 @@ if NSEG == 0:
 ## pre-allocate TimeTag data array
 Tags =  np.zeros(NSEG)
 
-## pre-allocate measurement data array
-if DO_MEASUREMENTS == "YES":
-    MeasData = np.zeros([NSEG,N_MEASUREMENTS+2])
 
 ## Flip through segments...
 for n in range(1,NSEG+1,1): ## Python indices start at 0, segments start at 1
@@ -211,61 +235,6 @@ for n in range(1,NSEG+1,1): ## Python indices start at 0, segments start at 1
 
     Tags[n-1] = KsInfiniiVisionX.query(":WAVeform:SEGMented:TTAG?") # Get time tag of segment n ; always get time tags
 
-    if DO_MEASUREMENTS == "YES": ## FLAG_DEFINE_MEASUREMENTS
-
-        ## As an alternate method to the below method of explicitly defining each measurement, one could setup measurements on the scope,
-            ## and just grab and parse the results with results = KsInfiniiVisionX.query(":MEASure:RESults?”).split(,).  Refer to programmer’s guide for more details.
-            ## Also requires user to let the oscilloscope “analyze” the segments.
-            ## However, the oscilloscope may not allow for more than so many measurements (up to 10, depending on oscilloscope), and using more than
-            ## 1 custom threshold per channel does not work on the oscilloscope itself.  The below method has no such limitations.
-
-        M1 = KsInfiniiVisionX.query(":MEASure:VMIN? CHANnel1") # With the question mark after the measurement, the scope makes a measurement and returns it, but it does not show up on screen
-        M2 = KsInfiniiVisionX.query(":MEASure:VPP? CHANnel3")
-        M3 = KsInfiniiVisionX.query(":MEASure:DEFine THResholds,ABSolute,2,1.15,0.25,CHANnel1;:MEASure:FREQuency? CHANnel1;:MEASure:DEFine THResholds,STANdard,CHANnel1") # shows how to change thresholds and make a measurement with them.
-            ## Note the threshold definition code and measurement is split with a semi-colon ;
-            ## IMPORTANT NOTE:
-                ## When the loop starts over it will now have perhaps wrong thresholds for some other timing measurement on ch1 because of the above threshold definition.
-                ## Thus, one may need to adjust/reset thresholds... for example: :MEASure:DEFine THResholds,STANdard,CHANnel1 is used (with a ;) to rese the thresholds
-
-        ## This next line shows how to use the ZOOM WINDOW to gate a measurement
-        M4 = KsInfiniiVisionX.query(":TIMebase:MODE WINDow;:TIMebase:WINDow:Range 20.00E-06;:TIMebase:WINDow:POSition -250E-06;:MEASure:WINDow ZOOM;:MEASure:VAVerage?;:MEASure:WINDow MAIN;:TIMebase:MODE MAIN")
-        ## It is performed like this:
-            ##  Note everything was concatenated with semi-colons, as this speeds things up
-            ## 1. Turn on zoom window with :TIMebase:MODE WINDow
-            ## 2. Adjust width and range (total width) and then position of zoom window with :TIMebase:WINDow:Range 20.00E-06 and :TIMebase:WINDow:POSition -250E-06
-                ## Note, for the ZOOM window, a negative position moves the window to the left, which is opposite the MAIN window behavior
-                ## Need to adjust width (RANGe) before the POSition as POSition can change when the RANGE is adjusted
-            ## 3. Tell oscilloscope to apply measurements to Zoom window with :MEASure:WINDow ZOOM
-            ## 4. Make measurement (adjust thresholds as needed)
-            ## 5. Tell oscilloscope to go back to making measurements on main time window with :MEASure:WINDow MAIN
-            ## 6. Turn off zoom window (really, turning of the zoom window takes care of step 5, but is left in for clarity and robustness) with :TIMebase:MODE MAIN
-            ## On the X4000A, X3000T, and X6000A, it is possible to gate measurements with the cursors: use :MEASure:WINDow GATE instead of :MEASure:WINDow ZOOM, and setup the marker X1 and X2 positions
-
-        ## Note: M3 and M4 are rather likely to cuase "Data out of Range Errors" for a generic setup...
-
-        ## Add additional measurements here and modify Data and Header as needed
-        ## M5 = KsInfiniiVisionX.query(":MEASure:VPP? CHANnel1")
-
-        ## This next measurement shows how to do a delay measurement on 2 channels with custom threhsolds for each
-        ## M6: = KsInfiniiVisionX.query(":MEASure:DEFine THResholds,ABSolute,2.6,1,0.3,CHANnel1;:MEASure:DEFine THResholds,ABSolute,2,0.5,.3,CHANnel3;:MEASure:DEFine DELay,3,-1;:MEASure:DELay? CHANNEL1,CHANNEL3;:MEASure:DEFine THResholds,STANdard,CHANnel1")
-            ## Defines absolute upper, middle, then lower thershold voltages (in that order) on channels 1 and then different ones on channel 3
-                ## :MEASure:DEFine THResholds,ABSolute,2.6,1,0.3,CHAN1
-                ## :MEASure:DEFine THResholds,ABSolute,2,0.5,.3,CHAN2
-            ## Defines the edges for the delay mesurement as the 3rd rising edge on the first channel, and the first falling edge on the second channel
-                ## :MEASure:DEFine DELay,3,-1
-                ## NOTE: If there is an edge close to the left side of the screen, it may not count it…. So do some tests first, of course
-            ## Actually measure dealy with: :MEASure:DELay? CHANNEL1,CHANNEL3
-            ## Reset thresholds... (reset delay definition if needed)
-
-        ## Assign results to Data array
-        MeasData[n-1,0] = n ## segment index
-        MeasData[n-1,1] = Tags[n-1] ## segment time tag
-        MeasData[n-1,2] = M1 ## first measurement
-        MeasData[n-1,3] = M2 ## second measurement
-        MeasData[n-1,4] = M3 ## third measurement
-        MeasData[n-1,5] = M4 ## Fourth measurement
-        ## Add more measurements to Data as needed
-        ## MeasData[n-1,6] = M5 ## Fifth measurement
 
     if GET_WFM_DATA == "YES":
         if n == 1: # Only need to do some things once
@@ -279,6 +248,7 @@ for n in range(1,NSEG+1,1): ## Python indices start at 0, segments start at 1
             ## Channel 1
             on_off = int(KsInfiniiVisionX.query(":CHANnel1:DISPlay?"))
             Channel_acquired = int(KsInfiniiVisionX.query(":WAVeform:SOURce CHANnel1;:WAVeform:POIN?")) # If there are no points available
+            print("Channel 1, on off {}, acquired {}".format(on_off,Channel_acquired))
                 ## this channel did not capture data and thus there are no points (but was turned on)
             if Channel_acquired == 0 or on_off == 0:
                 KsInfiniiVisionX.write(":CHANnel1:DISPlay OFF") # Setting a channel to be a waveform source turns it on...
@@ -298,6 +268,7 @@ for n in range(1,NSEG+1,1): ## Python indices start at 0, segments start at 1
             ## Channel 2
             on_off = int(KsInfiniiVisionX.query(":CHANnel2:DISPlay?"))
             Channel_acquired = int(KsInfiniiVisionX.query(":WAVeform:SOURce CHANnel2;:WAVeform:POIN?"))
+            print("Channel 2, on off {}, acquired {}".format(on_off,Channel_acquired))
             if Channel_acquired == 0 or on_off == 0:
                 KsInfiniiVisionX.write(":CHANnel2:DISPlay OFF")
                 CHS_ON[1] = 0
@@ -315,6 +286,7 @@ for n in range(1,NSEG+1,1): ## Python indices start at 0, segments start at 1
             ## Channel 3
             on_off = int(KsInfiniiVisionX.query(":CHANnel3:DISPlay?"))
             Channel_acquired = int(KsInfiniiVisionX.query(":WAVeform:SOURce CHANnel3;:WAVeform:POIN?"))
+            print("Channel 3, on off {}, acquired {}".format(on_off,Channel_acquired))
             if Channel_acquired == 0 or on_off == 0:
                 KsInfiniiVisionX.write(":CHANnel3:DISPlay OFF")
                 CHS_ON[2] = 0
@@ -332,6 +304,7 @@ for n in range(1,NSEG+1,1): ## Python indices start at 0, segments start at 1
             ## Channel 4
             on_off = int(KsInfiniiVisionX.query(":CHANnel4:DISPlay?"))
             Channel_acquired = int(KsInfiniiVisionX.query(":WAVeform:SOURce CHANnel4;:WAVeform:POIN?"))
+            print("Channel 4, on off {}, acquired {}".format(on_off,Channel_acquired))
             if Channel_acquired == 0 or on_off == 0:
                 KsInfiniiVisionX.write(":CHANnel4:DISPlay OFF")
                 CHS_ON[3] = 0
@@ -346,6 +319,7 @@ for n in range(1,NSEG+1,1): ## Python indices start at 0, segments start at 1
                 Y_ORIGin_Ch4    = float(Pre[8])
                 Y_REFerence_Ch4 = float(Pre[9])
 
+            print("NUMBER_CHANNELS_ON {}".format(NUMBER_CHANNELS_ON))
             ANALOGVERTPRES = (Y_INCrement_Ch1, Y_INCrement_Ch2, Y_INCrement_Ch3, Y_INCrement_Ch4, Y_ORIGin_Ch1, Y_ORIGin_Ch2, Y_ORIGin_Ch3, Y_ORIGin_Ch4, Y_REFerence_Ch1, Y_REFerence_Ch2, Y_REFerence_Ch3, Y_REFerence_Ch4)
             del Pre, on_off, Channel_acquired
 
@@ -398,14 +372,15 @@ for n in range(1,NSEG+1,1): ## Python indices start at 0, segments start at 1
         ch = 1 # channel number
         i  = 0 # index of Wav_data
         for each_value in  CHS_ON:
-            if each_value == 1:
-                print("Channel Number {} : Index of Wav data {} : Segment {}".format(ch,i,n))
-                ## Gets the waveform in 16 bit WORD format
-                Wav_Data[i,:,n-1] = np.array(KsInfiniiVisionX.query_binary_values(':WAVeform:SOURce CHANnel' + str(ch) + ';DATA?', "h", False))
-                ## Scales the waveform
-                Wav_Data[i,:,n-1] = ((Wav_Data[i,:,n-1]-ANALOGVERTPRES[ch+7])*ANALOGVERTPRES[ch-1])+ANALOGVERTPRES[ch+3]
-                    ## For clarity: Scaled_waveform_Data[*] = [(Unscaled_Waveform_Data[*] - Y_reference) * Y_increment] + Y_origin
-                i +=1
+            #if each_value == 1:
+            # save all channels
+            print("Channel Number {} : Index of Wav data {} : Segment {}".format(ch,i,n))
+            ## Gets the waveform in 16 bit WORD format
+            Wav_Data[i,:,n-1] = np.array(KsInfiniiVisionX.query_binary_values(':WAVeform:SOURce CHANnel' + str(ch) + ';DATA?', "h", False))
+            ## Scales the waveform
+            Wav_Data[i,:,n-1] = ((Wav_Data[i,:,n-1]-ANALOGVERTPRES[ch+7])*ANALOGVERTPRES[ch-1])+ANALOGVERTPRES[ch+3]
+                ## For clarity: Scaled_waveform_Data[*] = [(Unscaled_Waveform_Data[*] - Y_reference) * Y_increment] + Y_origin
+            i +=1
             ch +=1
         del ch, i,
 
@@ -420,17 +395,6 @@ KsInfiniiVisionX.close()
 
 ## Data save operations
 
-if DO_MEASUREMENTS == "YES":
-    ## Slightly rededifne measurement header info
-    MeasHeader = "Segment Index, Segment Time Tag (s)," + MeasHeader
-
-    ## Save measurement data in csv format - openable in Microsoft XL and most other software...
-    filename = BASE_DIRECTORY + BASE_FILE_NAME + "_Measurements.csv"
-    with open(filename, 'w') as filehandle:
-        filehandle.write(str(MeasHeader) + "\n")
-        np.savetxt(filehandle, MeasData, delimiter=',')
-    del filehandle, filename
-
 ## Save waveform data
 if GET_WFM_DATA == "YES":
 
@@ -441,10 +405,13 @@ if GET_WFM_DATA == "YES":
 
     if OUTPUT_FILE == "CSV" or OUTPUT_FILE == "BOTH": 
 
+        print('Saving waveform(s) in csv format...' )
+
         segment_indices = np.linspace(1,NSEG,NSEG)
         segment_indices = [ int(index) for index in segment_indices ] 
         #segment_indices = np.linspace(1,NSEG,NSEG, dtype = int)
 
+        start_time = time.clock()  # Time saving waveform data to a numpy file
         i = 0
         ch = 1
         for each_value in CHS_ON:
@@ -460,6 +427,10 @@ if GET_WFM_DATA == "YES":
                     #else:
                     filehandle.write("Time (s), Waveforms...\n")
                     np.savetxt(filehandle, np.insert(Wav_Data[i,:,:],0,DataTime,axis=1), delimiter=',')
+                    csv_saving_time = time.clock() - start_time
+
+                    print('Done saving' + '    ' + filename)
+                    print('This took {:.3f} seconds '.format(csv_saving_time)
                 i +=1
             ch +=1
         del each_value, ch, filehandle, filename, segment_indices
@@ -474,24 +445,24 @@ if GET_WFM_DATA == "YES":
         i = 0
         ch = 1
         for each_value in CHS_ON:
-            if each_value == 1:
+            #if each_value == 1:
+            # actually save all waveforms
 
-                header = "Time (s),Channel 1 (V)\n"
-                filename = BASE_DIRECTORY + BASE_FILE_NAME + "_Channel" + str(ch) + ".csv"
-                npy_file = filename + '.npy'
+            header = "Time (s),Channel 1 (V)\n"
+            filename = BASE_DIRECTORY + BASE_FILE_NAME + "_Channel" + str(ch) + ".npy"
 
-                with open(npy_file, 'wb') as filehandle:
-                    np.save(filehandle, np.insert(Wav_Data[i,:,:],0,DataTime,axis=1)) 
-                    #np.save(filehandle, np.insert(waveforms, 0, time_axis, axis=1))
-                    npy_saving_time = time.clock() - start_time
+            with open(filename, 'wb') as filehandle:
+                np.save(filehandle, np.insert(Wav_Data[i,:,:],0,DataTime,axis=1)) 
+                #np.save(filehandle, np.insert(waveforms, 0, time_axis, axis=1))
+                npy_saving_time = time.clock() - start_time
 
-                print('Done saving' + '    ' + npy_file)
-                print('This took {:.3f} seconds '.format(npy_saving_time)
-                          )
-                i +=1
+            print('Done saving' + '    ' + filename)
+            print('This took {:.3f} seconds '.format(npy_saving_time)
+                      )
+            i +=1
             ch +=1
         del each_value, ch, filehandle, filename 
 
-del n, BASE_DIRECTORY, BASE_FILE_NAME, MeasHeader
+del n, BASE_DIRECTORY, BASE_FILE_NAME 
 
 print "Done."
