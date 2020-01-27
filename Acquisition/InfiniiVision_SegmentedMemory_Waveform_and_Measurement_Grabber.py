@@ -88,10 +88,10 @@ parser.add_argument('--trigCh',metavar='trigCh', type=str, default='AUX',help='t
 parser.add_argument('--trig',metavar='trig', type=float, default= -0.05, help='trigger value in V (default Aux (-0.05V))',required=False)
 parser.add_argument('--trigSlope',metavar='trigSlope', type=str, default= 'NEGative', help='trigger slope; positive(rise) or negative(fall)',required=False)
 
-parser.add_argument('--vScale1',metavar='vScale1', type=float, default= 1.0, help='Vertical scale, volts/div',required=False)
-parser.add_argument('--vScale2',metavar='vScale2', type=float, default= 0.2, help='Vertical scale, volts/div',required=False)
-parser.add_argument('--vScale3',metavar='vScale3', type=float, default= 1.0, help='Vertical scale, volts/div',required=False)
-parser.add_argument('--vScale4',metavar='vScale4', type=float, default= 0.2, help='Vertical scale, volts/div',required=False)
+parser.add_argument('--vScale1',metavar='vScale1', type=float, default= 0.040, help='Vertical scale, volts/div',required=False)
+parser.add_argument('--vScale2',metavar='vScale2', type=float, default= 0.040, help='Vertical scale, volts/div',required=False)
+parser.add_argument('--vScale3',metavar='vScale3', type=float, default= 0.40, help='Vertical scale, volts/div',required=False)
+parser.add_argument('--vScale4',metavar='vScale4', type=float, default= 0.40, help='Vertical scale, volts/div',required=False)
 
 parser.add_argument('--timeoffset',metavar='timeoffset', type=float, default=-130, help='Offset to compensate for trigger delay. This is the delta T between the center of the acquisition window and the trigger. (default for NimPlusX: -160 ns)',required=False)
 
@@ -107,6 +107,8 @@ print "timeoffset is ",timeoffset
 
 # helpful directory info
 this_package="/home/daq/ETL_Agilent_MSO-X-6004A/Acquisition"
+log_path     = "{}/Logbook.txt".format(this_package)
+run_log_path = "{}/RunLog.txt".format(this_package)
 
 """#################TO CONFIGURE INSTRUMENT#################"""
 # variables for individual settings
@@ -144,6 +146,8 @@ if runNumberParam == -1:
     print('---------------------\n')
     print(date)
     print('---------------------\n')
+    with open(RunNumberFile,'w') as file:
+        file.write(str(runNumber+1))
 
 else: runNumber = runNumberParam
 
@@ -151,7 +155,15 @@ BASE_DIRECTORY = "/home/daq/ETL_Agilent_MSO-X-6004A/Acquisition/tmp_output/"
 BASE_FILE_NAME = "run_{}".format(runNumber)
 
 ## Output file format 
-OUTPUT_FILE = "BOTH" #  CSV, BINARY, BOTH, or NONE 
+OUTPUT_FILE = "BINARY" #  CSV, BINARY, BOTH, or NONE 
+
+#Write in the log file
+logf = open(log_path,"a+")
+logf.write("\n\n#### SCOPE LOGBOOK -- RUN NUMBER {} ####\n\n".format(runNumber))
+logf.write("Date:\t{}\n".format(date))
+logf.write("---------------------------------------------------------\n")
+logf.write("Number of events per file: {} \n".format(numEvents))
+logf.write("---------------------------------------------------------\n\n")
 
 ##############################################################################################################################################################################
 ##############################################################################################################################################################################
@@ -186,11 +198,61 @@ KsInfiniiVisionX.timeout = GLOBAL_TOUT
 KsInfiniiVisionX.clear()
 
 
-# Configuring things....
+# Bandwidth Configuration 
 KsInfiniiVisionX.write('ch1:bandwidth full')
 KsInfiniiVisionX.write('ch2:bandwidth full')
 KsInfiniiVisionX.write('ch3:bandwidth full')
 KsInfiniiVisionX.write('ch4:bandwidth full')
+
+# Horizontal Configuration
+KsInfiniiVisionX.write(':STOP;*OPC?')
+
+KsInfiniiVisionX.write(':TIMebase:RANGe {}'.format(hScale)) ## full-scale horizontal time in s. Range value is ten times the time-per division value.
+KsInfiniiVisionX.write(':TIMebase:REFerence:PERCent 50') ## percent of screen location
+KsInfiniiVisionX.write(':ACQuire:SRATe:ANALog {}'.format(samplingrate))
+KsInfiniiVisionX.write(':TIMebase:POSition {}'.format(timeoffset)) ## offset
+KsInfiniiVisionX.write(':ACQuire:MODE SEGMented') ## fast frame/segmented acquisition mode
+KsInfiniiVisionX.write(':ACQuire:SEGMented:COUNt {}'.format(numEvents)) ##number of segments to acquire
+KsInfiniiVisionX.write(':ACQuire:POINts:ANALog {}'.format(numPoints))
+KsInfiniiVisionX.write(':ACQuire:INTerpolate 0') ## interpolation is set off (otherwise its set to auto, which cause errors downstream)
+
+print("# SCOPE HORIZONTAL SETUP #")
+print('Horizontal scale set to {} for division\n'.format(hScale))
+print('Horizontal offset set to {}'.format(timeoffset))
+
+logf.write("HORIZONTAL SETUP\n")
+logf.write('- Horizontal scale set to {} s for division\n\n'.format(hScale))
+
+# Vertical Configuration
+KsInfiniiVisionX.write('CHANnel1:SCALe {}'.format(vScale_ch1))
+KsInfiniiVisionX.write('CHANnel2:SCALe {}'.format(vScale_ch2))
+KsInfiniiVisionX.write('CHANnel3:SCALe {}'.format(vScale_ch3))
+KsInfiniiVisionX.write('CHANnel4:SCALe {}'.format(vScale_ch4))
+
+KsInfiniiVisionX.write('CHANnel1:OFFSet {}'.format(-vScale_ch1 * vPos_ch1))
+KsInfiniiVisionX.write('CHANnel2:OFFSet {}'.format(-vScale_ch2 * vPos_ch2))
+KsInfiniiVisionX.write('CHANnel3:OFFSet {}'.format(-vScale_ch3 * vPos_ch3))
+KsInfiniiVisionX.write('CHANnel4:OFFSet {}'.format(-vScale_ch4 * vPos_ch4))
+
+logf.write("VERTICAL SETUP\n")
+logf.write('- CH1: vertical scale set to {} V for division\n'.format(vScale_ch1))
+logf.write('- CH2: vertical scale set to {} V for division\n'.format(vScale_ch2))
+logf.write('- CH3: vertical scale set to {} V for division\n'.format(vScale_ch3))
+logf.write('- CH4: vertical scale set to {} V for division\n\n'.format(vScale_ch4))
+
+# Trigger Configuration
+KsInfiniiVisionX.write('TRIGger:MODE EDGE; :TRIGger:EDGE:SOURce %s; :TRIGger:LEVel %s, %f'%(trigCh, trigCh, trigLevel))
+KsInfiniiVisionX.write(':TRIGger:EDGE:SLOPe %s;' %(triggerSlope))
+
+trigprint='%.3f'%(trigLevel)
+print("# TRIGGER SETUP #")
+print('Trigger scale set to %s V\n'%(trigprint))
+
+logf.write("TRIGGER SETUP\n")
+logf.write('- Trigger Channel set to %s\n'%(trigCh))
+logf.write('- Trigger scale set to %s V\n\n\n\n'%(trigprint))
+logf.close()
+print('Horizontal, vertical, and trigger settings configured.\n')
 
 ## Program assumes the scope is already set up to capture the desired
 ## number of segments.
@@ -230,7 +292,7 @@ Tags =  np.zeros(NSEG)
 ## Flip through segments...
 for n in range(1,NSEG+1,1): ## Python indices start at 0, segments start at 1
 
-    print("Acquiring segment {}".format(n))
+    #print("Acquiring segment {}".format(n))
     KsInfiniiVisionX.write(":ACQuire:SEGMented:INDex " + str(n)) # Go to segment n
 
     Tags[n-1] = KsInfiniiVisionX.query(":WAVeform:SEGMented:TTAG?") # Get time tag of segment n ; always get time tags
@@ -374,7 +436,7 @@ for n in range(1,NSEG+1,1): ## Python indices start at 0, segments start at 1
         for each_value in  CHS_ON:
             #if each_value == 1:
             # save all channels
-            print("Channel Number {} : Index of Wav data {} : Segment {}".format(ch,i,n))
+            #print("Channel Number {} : Index of Wav data {} : Segment {}".format(ch,i,n))
             ## Gets the waveform in 16 bit WORD format
             Wav_Data[i,:,n-1] = np.array(KsInfiniiVisionX.query_binary_values(':WAVeform:SOURce CHANnel' + str(ch) + ';DATA?', "h", False))
             ## Scales the waveform
@@ -430,7 +492,7 @@ if GET_WFM_DATA == "YES":
                     csv_saving_time = time.clock() - start_time
 
                     print('Done saving' + '    ' + filename)
-                    print('This took {:.3f} seconds '.format(csv_saving_time)
+                    print('This took {:.3f} seconds '.format(csv_saving_time))
                 i +=1
             ch +=1
         del each_value, ch, filehandle, filename, segment_indices
