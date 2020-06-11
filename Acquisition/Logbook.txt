@@ -3877,3 +3877,387 @@ TRIGGER SETUP
 
 
 
+
+
+#### SCOPE LOGBOOK -- RUN NUMBER 27 ####
+
+Date:	2020-01-27 18:16:32.121423
+---------------------------------------------------------
+Number of events per file: 100 
+---------------------------------------------------------
+
+HORIZONTAL SETUP
+- Horizontal scale set to 1.25e-07 s for division
+
+VERTICAL SETUP
+- CH1: vertical scale set to 0.04 V for division
+- CH2: vertical scale set to 0.02 V for division
+- CH3: vertical scale set to 0.4 V for division
+- CH4: vertical scale set to 0.4 V for division
+
+TRIGGER SETUP
+- Trigger Channel set to CHANnel1
+- Trigger scale set to 0.000 V
+
+
+
+
+
+#### SCOPE LOGBOOK -- RUN NUMBER 28 ####
+
+Date:	2020-01-27 18:17:25.637486
+---------------------------------------------------------
+Number of events per file: 100 
+---------------------------------------------------------
+
+HORIZONTAL SETUP
+- Horizontal scale set to 1.25e-07 s for division
+
+VERTICAL SETUP
+- CH1: vertical scale set to 0.04 V for division
+- CH2: vertical scale set to 0.02 V for division
+- CH3: vertical scale set to 0.4 V for division
+- CH4: vertical scale set to 0.4 V for division
+
+TRIGGER SETUP
+- Trigger Channel set to CHANnel1
+- Trigger scale set to 0.000 V
+
+
+
+
+
+#### SCOPE LOGBOOK -- RUN NUMBER 29 ####
+
+Date:	2020-01-27 18:17:49.097279
+---------------------------------------------------------
+Number of events per file: 100 
+---------------------------------------------------------
+
+HORIZONTAL SETUP
+- Horizontal scale set to 1.25e-07 s for division
+
+VERTICAL SETUP
+- CH1: vertical scale set to 0.04 V for division
+- CH2: vertical scale set to 0.02 V for division
+- CH3: vertical scale set to 0.4 V for division
+- CH4: vertical scale set to 0.4 V for division
+
+TRIGGER SETUP
+- Trigger Channel set to CHANnel1
+- Trigger scale set to 0.000 V
+
+
+
+
+
+#### SCOPE LOGBOOK -- RUN NUMBER 30 ####
+
+Date:	2020-01-27 18:18:09.655135
+---------------------------------------------------------
+Number of events per file: 100 
+---------------------------------------------------------
+
+HORIZONTAL SETUP
+- Horizontal scale set to 1.25e-07 s for division
+
+VERTICAL SETUP
+- CH1: vertical scale set to 0.04 V for division
+- CH2: vertical scale set to 0.02 V for division
+- CH3: vertical scale set to 0.4 V for division
+- CH4: vertical scale set to 0.4 V for division
+
+TRIGGER SETUP
+- Trigger Channel set to CHANnel1
+- Trigger scale set to 0.000 V
+
+
+
+
+
+#### SCOPE LOGBOOK -- RUN NUMBER 31 ####
+
+Date:	2020-01-27 18:18:35.878822
+---------------------------------------------------------
+Number of events per file: 100 
+---------------------------------------------------------
+
+HORIZONTAL SETUP
+- Horizontal scale set to 1.25e-07 s for division
+
+VERTICAL SETUP
+- CH1: vertical scale set to 0.04 V for division
+- CH2: vertical scale set to 0.02 V for division
+- CH3: vertical scale set to 0.4 V for division
+- CH4: vertical scale set to 0.4 V for division
+
+TRIGGER SETUP
+- Trigger Channel set to CHANnel1
+- Trigger scale set to 0.000 V
+
+
+
+
+
+#### SCOPE LOGBOOK -- RUN NUMBER 32 ####
+
+Date:	2020-01-27 18:19:01.222253
+---------------------------------------------------------
+Number of events per file: 100 
+---------------------------------------------------------
+
+HORIZONTAL SETUP
+- Horizontal scale set to 1.25e-07 s for division
+
+VERTICAL SETUP
+- CH1: vertical scale set to 0.04 V for division
+- CH2: vertical scale set to 0.02 V for division
+- CH3: vertical scale set to 0.4 V for division
+- CH4: vertical scale set to 0.4 V for division
+
+TRIGGER SETUP
+- Trigger Channel set to CHANnel1
+- Trigger scale set to 0.000 V
+
+
+
+
+
+#### SCOPE LOGBOOK -- RUN NUMBER 33 ####
+
+Date:	2020-06-11 15:32:17.019201
+---------------------------------------------------------
+Number of events per file: 100 
+---------------------------------------------------------
+
+HORIZONTAL SETUP
+- Horizontal scale set to 1.25e-07 s for division
+
+VERTICAL SETUP
+- CH1: vertical scale set to 0.04 V for division
+- CH2: vertical scale set to 0.02 V for division
+- CH3: vertical scale set to 0.4 V for division
+- CH4: vertical scale set to 0.4 V for division
+
+TRIGGER SETUP
+- Trigger Channel set to CHANnel4
+- Trigger scale set to -0.030 V
+
+
+
+
+
+#### SCOPE LOGBOOK -- RUN NUMBER 34 ####
+
+Date:	2020-06-11 15:40:07.007758
+---------------------------------------------------------
+Number of events per file: 100 
+---------------------------------------------------------
+
+HORIZONTAL SETUP
+- Horizontal scale set to 1.25e-07 s for division
+
+VERTICAL SETUP
+- CH1: vertical scale set to 0.04 V for division
+- CH2: vertical scale set to 0.04 V for division
+- CH3: vertical scale set to 0.04 V for division
+- CH4: vertical scale set to 0.02 V for division
+
+TRIGGER SETUP
+- Trigger Channel set to CHANnel4
+- Trigger scale set to -0.030 V
+
+
+
+
+
+#### SCOPE LOGBOOK -- RUN NUMBER 35 ####
+
+Date:	2020-06-11 15:42:43.883222
+---------------------------------------------------------
+Number of events per file: 100 
+---------------------------------------------------------
+
+HORIZONTAL SETUP
+- Horizontal scale set to 1.25e-07 s for division
+
+VERTICAL SETUP
+- CH1: vertical scale set to 0.04 V for division
+- CH2: vertical scale set to 0.04 V for division
+- CH3: vertical scale set to 1.0 V for division
+- CH4: vertical scale set to 0.02 V for division
+
+TRIGGER SETUP
+- Trigger Channel set to CHANnel4
+- Trigger scale set to -0.030 V
+
+
+
+
+
+#### SCOPE LOGBOOK -- RUN NUMBER 36 ####
+
+Date:	2020-06-11 15:45:58.600447
+---------------------------------------------------------
+Number of events per file: 100 
+---------------------------------------------------------
+
+HORIZONTAL SETUP
+- Horizontal scale set to 1.25e-07 s for division
+
+VERTICAL SETUP
+- CH1: vertical scale set to 0.04 V for division
+- CH2: vertical scale set to 1.0 V for division
+- CH3: vertical scale set to 0.04 V for division
+- CH4: vertical scale set to 0.02 V for division
+
+TRIGGER SETUP
+- Trigger Channel set to CHANnel4
+- Trigger scale set to -0.030 V
+
+
+
+
+
+#### SCOPE LOGBOOK -- RUN NUMBER 37 ####
+
+Date:	2020-06-11 15:49:20.640083
+---------------------------------------------------------
+Number of events per file: 100 
+---------------------------------------------------------
+
+HORIZONTAL SETUP
+- Horizontal scale set to 1.25e-07 s for division
+
+VERTICAL SETUP
+- CH1: vertical scale set to 0.05 V for division
+- CH2: vertical scale set to 1.0 V for division
+- CH3: vertical scale set to 0.05 V for division
+- CH4: vertical scale set to 0.02 V for division
+
+TRIGGER SETUP
+- Trigger Channel set to CHANnel4
+- Trigger scale set to -0.030 V
+
+
+
+
+
+#### SCOPE LOGBOOK -- RUN NUMBER 38 ####
+
+Date:	2020-06-11 15:53:02.142523
+---------------------------------------------------------
+Number of events per file: 100 
+---------------------------------------------------------
+
+HORIZONTAL SETUP
+- Horizontal scale set to 1.25e-07 s for division
+
+VERTICAL SETUP
+- CH1: vertical scale set to 0.05 V for division
+- CH2: vertical scale set to 1.0 V for division
+- CH3: vertical scale set to 0.05 V for division
+- CH4: vertical scale set to 0.02 V for division
+
+TRIGGER SETUP
+- Trigger Channel set to CHANnel4
+- Trigger scale set to -0.030 V
+
+
+
+
+
+#### SCOPE LOGBOOK -- RUN NUMBER 39 ####
+
+Date:	2020-06-11 16:00:50.639094
+---------------------------------------------------------
+Number of events per file: 100 
+---------------------------------------------------------
+
+HORIZONTAL SETUP
+- Horizontal scale set to 1.25e-07 s for division
+
+VERTICAL SETUP
+- CH1: vertical scale set to 0.05 V for division
+- CH2: vertical scale set to 1.0 V for division
+- CH3: vertical scale set to 0.05 V for division
+- CH4: vertical scale set to 0.02 V for division
+
+TRIGGER SETUP
+- Trigger Channel set to CHANnel4
+- Trigger scale set to -0.035 V
+
+
+
+
+
+#### SCOPE LOGBOOK -- RUN NUMBER 40 ####
+
+Date:	2020-06-11 16:07:07.331953
+---------------------------------------------------------
+Number of events per file: 100 
+---------------------------------------------------------
+
+HORIZONTAL SETUP
+- Horizontal scale set to 7.5e-08 s for division
+
+VERTICAL SETUP
+- CH1: vertical scale set to 0.05 V for division
+- CH2: vertical scale set to 1.0 V for division
+- CH3: vertical scale set to 0.05 V for division
+- CH4: vertical scale set to 0.02 V for division
+
+TRIGGER SETUP
+- Trigger Channel set to CHANnel4
+- Trigger scale set to -0.035 V
+
+
+
+
+
+#### SCOPE LOGBOOK -- RUN NUMBER 41 ####
+
+Date:	2020-06-11 16:08:59.487098
+---------------------------------------------------------
+Number of events per file: 100 
+---------------------------------------------------------
+
+HORIZONTAL SETUP
+- Horizontal scale set to 7.5e-08 s for division
+
+VERTICAL SETUP
+- CH1: vertical scale set to 0.02 V for division
+- CH2: vertical scale set to 0.05 V for division
+- CH3: vertical scale set to 0.1 V for division
+- CH4: vertical scale set to 0.05 V for division
+
+TRIGGER SETUP
+- Trigger Channel set to CHANnel1
+- Trigger scale set to -0.035 V
+
+
+
+
+
+#### SCOPE LOGBOOK -- RUN NUMBER 42 ####
+
+Date:	2020-06-11 16:10:35.833395
+---------------------------------------------------------
+Number of events per file: 100 
+---------------------------------------------------------
+
+HORIZONTAL SETUP
+- Horizontal scale set to 7.5e-08 s for division
+
+VERTICAL SETUP
+- CH1: vertical scale set to 0.02 V for division
+- CH2: vertical scale set to 0.05 V for division
+- CH3: vertical scale set to 0.1 V for division
+- CH4: vertical scale set to 0.05 V for division
+
+TRIGGER SETUP
+- Trigger Channel set to CHANnel1
+- Trigger scale set to -0.035 V
+
+
+

@@ -64,7 +64,7 @@ import datetime
 ## Initialization constants
 SCOPE_VISA_ADDRESS = "TCPIP::192.168.133.2::INSTR"  # MSOX6004A
 
-GLOBAL_TOUT =  50000 # IO time out in milliseconds
+GLOBAL_TOUT =  20000 # IO time out in milliseconds
 
 ## Pull waveform data?
 GET_WFM_DATA = "YES" # "YES" or "NO" ; Automatically determines which analog channels are on, and grabs the waveform data for each segment.
@@ -88,10 +88,10 @@ parser.add_argument('--trigCh',metavar='trigCh', type=str, default='AUX',help='t
 parser.add_argument('--trig',metavar='trig', type=float, default= -0.05, help='trigger value in V (default Aux (-0.05V))',required=False)
 parser.add_argument('--trigSlope',metavar='trigSlope', type=str, default= 'NEGative', help='trigger slope; positive(rise) or negative(fall)',required=False)
 
-parser.add_argument('--vScale1',metavar='vScale1', type=float, default= 0.040, help='Vertical scale, volts/div',required=False)
-parser.add_argument('--vScale2',metavar='vScale2', type=float, default= 0.040, help='Vertical scale, volts/div',required=False)
-parser.add_argument('--vScale3',metavar='vScale3', type=float, default= 0.40, help='Vertical scale, volts/div',required=False)
-parser.add_argument('--vScale4',metavar='vScale4', type=float, default= 0.40, help='Vertical scale, volts/div',required=False)
+parser.add_argument('--vScale1',metavar='vScale1', type=float, default= 0.020, help='Vertical scale, volts/div',required=False)
+parser.add_argument('--vScale2',metavar='vScale2', type=float, default= 0.050, help='Vertical scale, volts/div',required=False)
+parser.add_argument('--vScale3',metavar='vScale3', type=float, default= 0.100, help='Vertical scale, volts/div',required=False)
+parser.add_argument('--vScale4',metavar='vScale4', type=float, default= 0.050, help='Vertical scale, volts/div',required=False)
 
 parser.add_argument('--timeoffset',metavar='timeoffset', type=float, default=-130, help='Offset to compensate for trigger delay. This is the delta T between the center of the acquisition window and the trigger. (default for NimPlusX: -160 ns)',required=False)
 
@@ -128,9 +128,9 @@ vScale_ch4 =float(args.vScale4) # in Volts for division
 
 #vertical position
 vPos_ch1 = 1  # in Divisions
-vPos_ch2 = 0  # in Divisions
-vPos_ch3 = -2  # in Divisions
-vPos_ch4 = -3  # in Divisions
+vPos_ch2 = -2  # in Divisions
+vPos_ch3 = 2  # in Divisions
+vPos_ch4 = 1  # in Divisions
 
 date = datetime.datetime.now()
 
@@ -246,7 +246,8 @@ KsInfiniiVisionX.write(':TRIGger:EDGE:SLOPe %s;' %(triggerSlope))
 
 trigprint='%.3f'%(trigLevel)
 print("# TRIGGER SETUP #")
-print('Trigger scale set to %s V\n'%(trigprint))
+print('Trigger Channel set to %s V\n'%(trigCh))
+print('Trigger threshold set to %s V\n'%(trigprint))
 
 logf.write("TRIGGER SETUP\n")
 logf.write('- Trigger Channel set to %s\n'%(trigCh))
