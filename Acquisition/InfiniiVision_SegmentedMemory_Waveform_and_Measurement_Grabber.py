@@ -36,11 +36,13 @@ import argparse
 import pyvisa as visa
 import time
 import struct
+import math
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
 import datetime
 
+start_time = time.clock()  # Time saving waveform data to a numpy file
 
 ## INSTRUCTIONS
 ## 1. Setup oscilloscope and acquire segments manually, wait until acquisition is done
@@ -64,7 +66,7 @@ import datetime
 ## Initialization constants
 SCOPE_VISA_ADDRESS = "TCPIP::192.168.133.2::INSTR"  # MSOX6004A
 
-GLOBAL_TOUT =  20000 # IO time out in milliseconds
+GLOBAL_TOUT =  100000 # IO time out in milliseconds
 
 ## Pull waveform data?
 GET_WFM_DATA = "YES" # "YES" or "NO" ; Automatically determines which analog channels are on, and grabs the waveform data for each segment.
@@ -114,11 +116,20 @@ run_log_path = "{}/RunLog.txt".format(this_package)
 # variables for individual settings
 hScale = float(args.horizontalWindow)*1e-9
 samplingrate = float(args.sampleRate)*1e+9
-numEvents = int(args.numEvents) # number of events for each file
+numEvents = int(args.numEvents) # number of events to take  
+numSegments = 100 # number of segments per file
+numFiles = int(math.ceil(numEvents/numSegments)) # number of files or acquisition
 numPoints = samplingrate*hScale
+
 print("Sampling Rate : {}".format(samplingrate))
 print("NumEvents : {}".format(numEvents))
 print("NumPoints : {}".format(numPoints))
+
+# For now assuming
+#Ch1 = Photek
+#Ch2 = AOUT
+#Ch3 = DIS
+#Ch4 = empty 
 
 #vertical scale
 vScale_ch1 =float(args.vScale1) # in Volts for division
@@ -128,8 +139,8 @@ vScale_ch4 =float(args.vScale4) # in Volts for division
 
 #vertical position
 vPos_ch1 = 1  # in Divisions
-vPos_ch2 = -2  # in Divisions
-vPos_ch3 = 2  # in Divisions
+vPos_ch2 = 1  # in Divisions
+vPos_ch3 = -2  # in Divisions
 vPos_ch4 = 1  # in Divisions
 
 date = datetime.datetime.now()
@@ -162,7 +173,9 @@ logf = open(log_path,"a+")
 logf.write("\n\n#### SCOPE LOGBOOK -- RUN NUMBER {} ####\n\n".format(runNumber))
 logf.write("Date:\t{}\n".format(date))
 logf.write("---------------------------------------------------------\n")
-logf.write("Number of events per file: {} \n".format(numEvents))
+logf.write("Number of events in total: {} \n".format(numEvents))
+logf.write("Number of events per file: {} \n".format(numSegments))
+logf.write("Number of files in total: {} \n".format(numFiles))
 logf.write("---------------------------------------------------------\n\n")
 
 ##############################################################################################################################################################################
@@ -212,7 +225,8 @@ KsInfiniiVisionX.write(':TIMebase:REFerence:PERCent 50') ## percent of screen lo
 KsInfiniiVisionX.write(':ACQuire:SRATe:ANALog {}'.format(samplingrate))
 KsInfiniiVisionX.write(':TIMebase:POSition {}'.format(timeoffset)) ## offset
 KsInfiniiVisionX.write(':ACQuire:MODE SEGMented') ## fast frame/segmented acquisition mode
-KsInfiniiVisionX.write(':ACQuire:SEGMented:COUNt {}'.format(numEvents)) ##number of segments to acquire
+KsInfiniiVisionX.write(':ACQuire:SEGMented:COUNt {}'.format(numSegments)) ##number of segments to acquire
+#KsInfiniiVisionX.write(':ACQuire:SEGMented:COUNt {}'.format(numEvents)) ##number of segments to acquire
 KsInfiniiVisionX.write(':ACQuire:POINts:ANALog {}'.format(numPoints))
 KsInfiniiVisionX.write(':ACQuire:INTerpolate 0') ## interpolation is set off (otherwise its set to auto, which cause errors downstream)
 
@@ -257,275 +271,277 @@ print('Horizontal, vertical, and trigger settings configured.\n')
 
 ## Program assumes the scope is already set up to capture the desired
 ## number of segments.
+for fileNum in range(0,numFiles):
+    print("FILE {}".format(fileNum))
 
-
-opc = KsInfiniiVisionX.query(":DIGITIZE;*OPC?")
-#opc = KsInfiniiVisionX.query(":DIGITIZE CHANNEL1;*OPC?")
-
-##############################################################################################################################################################################
-##############################################################################################################################################################################
-## Flip through segments, get time tags and make measurements
-##############################################################################################################################################################################
-##############################################################################################################################################################################
-
-
-
-## Find number of segments actually acquired
-NSEG = int(KsInfiniiVisionX.query(":WAVeform:SEGMented:COUNt?"))
-## compare with :ACQuire:SEGMented:COUNt?
-## :ACQuire:SEGMented:COUNt? is how many segments the scope was set to acquire
-## :WAVeform:SEGMented:COUNt? is how many were actually acquired
-## KEY POINT:
-    ## Using fewer segments can result in a higher sample rate.
-    ## If the user sets the scope to acquire the maximum number for segments, and STOPS it before it is done,
-    ## it is likely that a higher sample rate could have been achieved.
-print str(NSEG) + " segments were acquired."
-if NSEG == 0:
+    opc = KsInfiniiVisionX.query(":SINGLE;*OPC?")
+    #opc = KsInfiniiVisionX.query(":DIGITIZE;*OPC?")
+    #opc = KsInfiniiVisionX.query(":DIGITIZE CHANNEL1;*OPC?")
+    
+    ##############################################################################################################################################################################
+    ##############################################################################################################################################################################
+    ## Flip through segments, get time tags and make measurements
+    ##############################################################################################################################################################################
+    ##############################################################################################################################################################################
+    
+    
+    
+    ## Find number of segments actually acquired
+    NSEG = int(KsInfiniiVisionX.query(":WAVeform:SEGMented:COUNt?"))
+    ## compare with :ACQuire:SEGMented:COUNt?
+    ## :ACQuire:SEGMented:COUNt? is how many segments the scope was set to acquire
+    ## :WAVeform:SEGMented:COUNt? is how many were actually acquired
+    ## KEY POINT:
+        ## Using fewer segments can result in a higher sample rate.
+        ## If the user sets the scope to acquire the maximum number for segments, and STOPS it before it is done,
+        ## it is likely that a higher sample rate could have been achieved.
+    print str(NSEG) + " segments were acquired."
+    if NSEG == 0:
+        ## Close Connection to scope properly
+        KsInfiniiVisionX.clear()
+        KsInfiniiVisionX.close()
+        sys.exit("No segments acquired, aborting script.")
+    
+    ## pre-allocate TimeTag data array
+    Tags =  np.zeros(NSEG)
+    
+    
+    ## Flip through segments...
+    for n in range(1,NSEG+1,1): ## Python indices start at 0, segments start at 1
+    
+        #print("Acquiring segment {}".format(n))
+        KsInfiniiVisionX.write(":ACQuire:SEGMented:INDex " + str(n)) # Go to segment n
+    
+        Tags[n-1] = KsInfiniiVisionX.query(":WAVeform:SEGMented:TTAG?") # Get time tag of segment n ; always get time tags
+    
+    
+        if GET_WFM_DATA == "YES":
+            if n == 1: # Only need to do some things once
+    
+                ## Determine which channels are on, and which have acquired data, and get the vertical pre-amble info accordingly
+                    ## Use brute force method for readability
+    
+                CHS_ON = [0,0,0,0] # Create empty array to store channel states
+                NUMBER_CHANNELS_ON = 0
+    
+                ## Channel 1
+                on_off = int(KsInfiniiVisionX.query(":CHANnel1:DISPlay?"))
+                Channel_acquired = int(KsInfiniiVisionX.query(":WAVeform:SOURce CHANnel1;:WAVeform:POIN?")) # If there are no points available
+                print("Channel 1, on off {}, acquired {}".format(on_off,Channel_acquired))
+                    ## this channel did not capture data and thus there are no points (but was turned on)
+                if Channel_acquired == 0 or on_off == 0:
+                    KsInfiniiVisionX.write(":CHANnel1:DISPlay OFF") # Setting a channel to be a waveform source turns it on...
+                    CHS_ON[0] = 0
+                    Y_INCrement_Ch1 = "BLANK"
+                    Y_ORIGin_Ch1    = "BLANK"
+                    Y_REFerence_Ch1 = "BLANK"
+                else:
+                    CHS_ON[0] = 1
+                    NUMBER_CHANNELS_ON += 1
+                    Pre = KsInfiniiVisionX.query(":WAVeform:SOURce CHANnel1;:WAVeform:PREamble?").split(',')
+                    Y_INCrement_Ch1 = float(Pre[7]) # Voltage difference between data points
+                    Y_ORIGin_Ch1    = float(Pre[8]) # Voltage at center screen
+                    Y_REFerence_Ch1 = float(Pre[9]) # Specifies the data point where y-origin occurs, alwasy zero
+                        ## The programmer's guide has a very good description of this, under the info on :WAVeform:PREamble.
+    
+                ## Channel 2
+                on_off = int(KsInfiniiVisionX.query(":CHANnel2:DISPlay?"))
+                Channel_acquired = int(KsInfiniiVisionX.query(":WAVeform:SOURce CHANnel2;:WAVeform:POIN?"))
+                print("Channel 2, on off {}, acquired {}".format(on_off,Channel_acquired))
+                if Channel_acquired == 0 or on_off == 0:
+                    KsInfiniiVisionX.write(":CHANnel2:DISPlay OFF")
+                    CHS_ON[1] = 0
+                    Y_INCrement_Ch2 = "BLANK"
+                    Y_ORIGin_Ch2    = "BLANK"
+                    Y_REFerence_Ch2 = "BLANK"
+                else:
+                    CHS_ON[1] = 1
+                    NUMBER_CHANNELS_ON += 1
+                    Pre = KsInfiniiVisionX.query(":WAVeform:SOURce CHANnel2;:WAVeform:PREamble?").split(',')
+                    Y_INCrement_Ch2 = float(Pre[7])
+                    Y_ORIGin_Ch2    = float(Pre[8])
+                    Y_REFerence_Ch2 = float(Pre[9])
+    
+                ## Channel 3
+                on_off = int(KsInfiniiVisionX.query(":CHANnel3:DISPlay?"))
+                Channel_acquired = int(KsInfiniiVisionX.query(":WAVeform:SOURce CHANnel3;:WAVeform:POIN?"))
+                print("Channel 3, on off {}, acquired {}".format(on_off,Channel_acquired))
+                if Channel_acquired == 0 or on_off == 0:
+                    KsInfiniiVisionX.write(":CHANnel3:DISPlay OFF")
+                    CHS_ON[2] = 0
+                    Y_INCrement_Ch3 = "BLANK"
+                    Y_ORIGin_Ch3    = "BLANK"
+                    Y_REFerence_Ch3 = "BLANK"
+                else:
+                    CHS_ON[2] = 1
+                    NUMBER_CHANNELS_ON += 1
+                    Pre = KsInfiniiVisionX.query(":WAVeform:SOURce CHANnel3;:WAVeform:PREamble?").split(',')
+                    Y_INCrement_Ch3 = float(Pre[7])
+                    Y_ORIGin_Ch3    = float(Pre[8])
+                    Y_REFerence_Ch3 = float(Pre[9])
+    
+                ## Channel 4
+                on_off = int(KsInfiniiVisionX.query(":CHANnel4:DISPlay?"))
+                Channel_acquired = int(KsInfiniiVisionX.query(":WAVeform:SOURce CHANnel4;:WAVeform:POIN?"))
+                print("Channel 4, on off {}, acquired {}".format(on_off,Channel_acquired))
+                if Channel_acquired == 0 or on_off == 0:
+                    KsInfiniiVisionX.write(":CHANnel4:DISPlay OFF")
+                    CHS_ON[3] = 0
+                    Y_INCrement_Ch4 = "BLANK"
+                    Y_ORIGin_Ch4    = "BLANK"
+                    Y_REFerence_Ch4 = "BLANK"
+                else:
+                    CHS_ON[3] = 1
+                    NUMBER_CHANNELS_ON += 1
+                    Pre = KsInfiniiVisionX.query(":WAVeform:SOURce CHANnel4;:WAVeform:PREamble?").split(',')
+                    Y_INCrement_Ch4 = float(Pre[7])
+                    Y_ORIGin_Ch4    = float(Pre[8])
+                    Y_REFerence_Ch4 = float(Pre[9])
+    
+                print("NUMBER_CHANNELS_ON {}".format(NUMBER_CHANNELS_ON))
+                ANALOGVERTPRES = (Y_INCrement_Ch1, Y_INCrement_Ch2, Y_INCrement_Ch3, Y_INCrement_Ch4, Y_ORIGin_Ch1, Y_ORIGin_Ch2, Y_ORIGin_Ch3, Y_ORIGin_Ch4, Y_REFerence_Ch1, Y_REFerence_Ch2, Y_REFerence_Ch3, Y_REFerence_Ch4)
+                del Pre, on_off, Channel_acquired
+    
+                ## Find first channel on
+                ch = 1
+                for each_value in CHS_ON:
+                    if each_value ==1:
+                        FIRST_CHANNEL_ON = ch
+                        break
+                    ch +=1
+                del ch, each_value
+    
+                ## Setup data export
+                #KsInfiniiVisionX.write(":WAVeform:FORMat BYTE")  # needs finesing 
+                KsInfiniiVisionX.write(":WAVeform:FORMAT WORD") # 16 bit word format...
+                KsInfiniiVisionX.write(":WAVeform:BYTeorder LSBFirst") # Explicitly set this to avoid confusion
+                KsInfiniiVisionX.write(":WAVeform:UNSigned 0") # Explicitly set this to avoid confusion
+                KsInfiniiVisionX.write(":WAVeform:SOURce CHANnel" + str(FIRST_CHANNEL_ON))  # Set waveform source to any enabled channel, here the FIRST_CHANNEL_ON
+                KsInfiniiVisionX.write(":WAVeform:POINts MAX") # Set number of points to max possible for any InfiniiVision; ensures all are available
+                    ## If using :WAVeform:POINts MAX, be sure to do this BEFORE setting the :WAVeform:POINts:MODE as it will switch it to MAX
+                KsInfiniiVisionX.write(":WAVeform:POINts:MODE RAW")  # Set this now so when the preamble is queried it knows what how many points it can retrieve from
+                    ## If measurements are also being made, they are made on a different record, the "measurement record."  This record can be accessed by using:
+                    ## :WAVeform:POINts:MODE NORMal isntead of :WAVeform:POINts:MODE RAW
+                POINTS = int(KsInfiniiVisionX.query(":WAVeform:POINts?")) # Get number of points.  This is the number of points in each segment.
+                print str(POINTS) + " points were acquired for each channel for each segment."
+    
+                ## Get timing pre-amble data - this can be done at any segment - it does not change segment to segment
+                Pre = KsInfiniiVisionX.query(":WAVeform:PREamble?").split(',')
+                AMODE        = float(Pre[1]) # Gives the scope acquisition mode
+                X_INCrement = float(Pre[4]) # Time difference between data points
+                X_ORIGin    = float(Pre[5]) # Always the first data point in memory
+                X_REFerence = float(Pre[6]) # Specifies the data point associated with x-origin; The x-reference point is the first point displayed and XREFerence is always 0.
+                    ## The programmer's guide has a very good description of this, under the info on :WAVeform:PREamble.
+                del Pre
+    
+                ## Pre-allocate data array
+                if AMODE == 1: # This means peak detect mode
+                    Wav_Data = np.zeros([NUMBER_CHANNELS_ON,2*POINTS,NSEG])
+                    ## Peak detect mode returns twice as many points as the points query, one point each for LOW and HIGH values
+                else: # For all other acquistion modes
+                    Wav_Data = np.zeros([NUMBER_CHANNELS_ON,POINTS,NSEG])
+    
+                ## Create time axis:
+                DataTime = ((np.linspace(0,POINTS-1,POINTS)-X_REFerence)*X_INCrement)+X_ORIGin
+                if AMODE == 1: # This means peak detect mode
+                    DataTime = np.repeat(DataTime,2)
+                    ##  The points come out as Low(time1),High(time1),Low(time2),High(time2)....
+    
+            ## Pull waveform data, scale it - for every segment
+            ch = 1 # channel number
+            i  = 0 # index of Wav_data
+            for each_value in  CHS_ON:
+                #if each_value == 1:
+                # save all channels
+                #print("Channel Number {} : Index of Wav data {} : Segment {}".format(ch,i,n))
+                ## Gets the waveform in 16 bit WORD format
+                Wav_Data[i,:,n-1] = np.array(KsInfiniiVisionX.query_binary_values(':WAVeform:SOURce CHANnel' + str(ch) + ';DATA?', "h", False))
+                ## Scales the waveform
+                Wav_Data[i,:,n-1] = ((Wav_Data[i,:,n-1]-ANALOGVERTPRES[ch+7])*ANALOGVERTPRES[ch-1])+ANALOGVERTPRES[ch+3]
+                    ## For clarity: Scaled_waveform_Data[*] = [(Unscaled_Waveform_Data[*] - Y_reference) * Y_increment] + Y_origin
+                i +=1
+                ch +=1
+            del ch, i,
+    
+    ## End of flipping through segments
+    ## Some cleanup
+    if GET_WFM_DATA == "YES":
+        del  ANALOGVERTPRES,Y_INCrement_Ch1, Y_ORIGin_Ch1, Y_REFerence_Ch1, Y_INCrement_Ch2, Y_ORIGin_Ch2, Y_REFerence_Ch2,Y_INCrement_Ch3, Y_ORIGin_Ch3, Y_REFerence_Ch3, Y_INCrement_Ch4, Y_ORIGin_Ch4, Y_REFerence_Ch4, X_INCrement, X_ORIGin, X_REFerence
+    
     ## Close Connection to scope properly
     KsInfiniiVisionX.clear()
-    KsInfiniiVisionX.close()
-    sys.exit("No segments acquired, aborting script.")
-
-## pre-allocate TimeTag data array
-Tags =  np.zeros(NSEG)
-
-
-## Flip through segments...
-for n in range(1,NSEG+1,1): ## Python indices start at 0, segments start at 1
-
-    #print("Acquiring segment {}".format(n))
-    KsInfiniiVisionX.write(":ACQuire:SEGMented:INDex " + str(n)) # Go to segment n
-
-    Tags[n-1] = KsInfiniiVisionX.query(":WAVeform:SEGMented:TTAG?") # Get time tag of segment n ; always get time tags
-
-
+    #KsInfiniiVisionX.close()
+    # don't close until after we save?
+    
+    ## Data save operations
+    
+    ## Save waveform data
     if GET_WFM_DATA == "YES":
-        if n == 1: # Only need to do some things once
-
-            ## Determine which channels are on, and which have acquired data, and get the vertical pre-amble info accordingly
-                ## Use brute force method for readability
-
-            CHS_ON = [0,0,0,0] # Create empty array to store channel states
-            NUMBER_CHANNELS_ON = 0
-
-            ## Channel 1
-            on_off = int(KsInfiniiVisionX.query(":CHANnel1:DISPlay?"))
-            Channel_acquired = int(KsInfiniiVisionX.query(":WAVeform:SOURce CHANnel1;:WAVeform:POIN?")) # If there are no points available
-            print("Channel 1, on off {}, acquired {}".format(on_off,Channel_acquired))
-                ## this channel did not capture data and thus there are no points (but was turned on)
-            if Channel_acquired == 0 or on_off == 0:
-                KsInfiniiVisionX.write(":CHANnel1:DISPlay OFF") # Setting a channel to be a waveform source turns it on...
-                CHS_ON[0] = 0
-                Y_INCrement_Ch1 = "BLANK"
-                Y_ORIGin_Ch1    = "BLANK"
-                Y_REFerence_Ch1 = "BLANK"
-            else:
-                CHS_ON[0] = 1
-                NUMBER_CHANNELS_ON += 1
-                Pre = KsInfiniiVisionX.query(":WAVeform:SOURce CHANnel1;:WAVeform:PREamble?").split(',')
-                Y_INCrement_Ch1 = float(Pre[7]) # Voltage difference between data points
-                Y_ORIGin_Ch1    = float(Pre[8]) # Voltage at center screen
-                Y_REFerence_Ch1 = float(Pre[9]) # Specifies the data point where y-origin occurs, alwasy zero
-                    ## The programmer's guide has a very good description of this, under the info on :WAVeform:PREamble.
-
-            ## Channel 2
-            on_off = int(KsInfiniiVisionX.query(":CHANnel2:DISPlay?"))
-            Channel_acquired = int(KsInfiniiVisionX.query(":WAVeform:SOURce CHANnel2;:WAVeform:POIN?"))
-            print("Channel 2, on off {}, acquired {}".format(on_off,Channel_acquired))
-            if Channel_acquired == 0 or on_off == 0:
-                KsInfiniiVisionX.write(":CHANnel2:DISPlay OFF")
-                CHS_ON[1] = 0
-                Y_INCrement_Ch2 = "BLANK"
-                Y_ORIGin_Ch2    = "BLANK"
-                Y_REFerence_Ch2 = "BLANK"
-            else:
-                CHS_ON[1] = 1
-                NUMBER_CHANNELS_ON += 1
-                Pre = KsInfiniiVisionX.query(":WAVeform:SOURce CHANnel2;:WAVeform:PREamble?").split(',')
-                Y_INCrement_Ch2 = float(Pre[7])
-                Y_ORIGin_Ch2    = float(Pre[8])
-                Y_REFerence_Ch2 = float(Pre[9])
-
-            ## Channel 3
-            on_off = int(KsInfiniiVisionX.query(":CHANnel3:DISPlay?"))
-            Channel_acquired = int(KsInfiniiVisionX.query(":WAVeform:SOURce CHANnel3;:WAVeform:POIN?"))
-            print("Channel 3, on off {}, acquired {}".format(on_off,Channel_acquired))
-            if Channel_acquired == 0 or on_off == 0:
-                KsInfiniiVisionX.write(":CHANnel3:DISPlay OFF")
-                CHS_ON[2] = 0
-                Y_INCrement_Ch3 = "BLANK"
-                Y_ORIGin_Ch3    = "BLANK"
-                Y_REFerence_Ch3 = "BLANK"
-            else:
-                CHS_ON[2] = 1
-                NUMBER_CHANNELS_ON += 1
-                Pre = KsInfiniiVisionX.query(":WAVeform:SOURce CHANnel3;:WAVeform:PREamble?").split(',')
-                Y_INCrement_Ch3 = float(Pre[7])
-                Y_ORIGin_Ch3    = float(Pre[8])
-                Y_REFerence_Ch3 = float(Pre[9])
-
-            ## Channel 4
-            on_off = int(KsInfiniiVisionX.query(":CHANnel4:DISPlay?"))
-            Channel_acquired = int(KsInfiniiVisionX.query(":WAVeform:SOURce CHANnel4;:WAVeform:POIN?"))
-            print("Channel 4, on off {}, acquired {}".format(on_off,Channel_acquired))
-            if Channel_acquired == 0 or on_off == 0:
-                KsInfiniiVisionX.write(":CHANnel4:DISPlay OFF")
-                CHS_ON[3] = 0
-                Y_INCrement_Ch4 = "BLANK"
-                Y_ORIGin_Ch4    = "BLANK"
-                Y_REFerence_Ch4 = "BLANK"
-            else:
-                CHS_ON[3] = 1
-                NUMBER_CHANNELS_ON += 1
-                Pre = KsInfiniiVisionX.query(":WAVeform:SOURce CHANnel4;:WAVeform:PREamble?").split(',')
-                Y_INCrement_Ch4 = float(Pre[7])
-                Y_ORIGin_Ch4    = float(Pre[8])
-                Y_REFerence_Ch4 = float(Pre[9])
-
-            print("NUMBER_CHANNELS_ON {}".format(NUMBER_CHANNELS_ON))
-            ANALOGVERTPRES = (Y_INCrement_Ch1, Y_INCrement_Ch2, Y_INCrement_Ch3, Y_INCrement_Ch4, Y_ORIGin_Ch1, Y_ORIGin_Ch2, Y_ORIGin_Ch3, Y_ORIGin_Ch4, Y_REFerence_Ch1, Y_REFerence_Ch2, Y_REFerence_Ch3, Y_REFerence_Ch4)
-            del Pre, on_off, Channel_acquired
-
-            ## Find first channel on
+    
+        #if DO_AVERAGE == "YES":
+        #    Ave_Data = np.mean(Wav_Data,axis = 2)
+        #    Wav_Data = np.dstack((Wav_Data,Ave_Data))
+        #    del Ave_Data
+    
+        if OUTPUT_FILE == "CSV" or OUTPUT_FILE == "BOTH": 
+    
+            print('Saving waveform(s) in csv format...' )
+    
+            segment_indices = np.linspace(1,NSEG,NSEG)
+            segment_indices = [ int(index) for index in segment_indices ] 
+            #segment_indices = np.linspace(1,NSEG,NSEG, dtype = int)
+    
+            i = 0
             ch = 1
             for each_value in CHS_ON:
-                if each_value ==1:
-                    FIRST_CHANNEL_ON = ch
-                    break
+                if each_value == 1:
+                    filename = BASE_DIRECTORY + BASE_FILE_NAME + "_Channel" + str(ch) + ".csv"
+                    with open(filename, 'w') as filehandle:
+                        filehandle.write("Timestamp (s):,")
+                        np.savetxt(filehandle, np.atleast_2d(Tags), delimiter=',')
+                        filehandle.write("Segment Index:,")
+                        np.savetxt(filehandle, np.atleast_2d(segment_indices), delimiter=',')
+                        #if DO_AVERAGE == "YES":
+                        #    filehandle.write("Time (s), Waveforms... Final column is averaged.\n")
+                        #else:
+                        filehandle.write("Time (s), Waveforms...\n")
+                        np.savetxt(filehandle, np.insert(Wav_Data[i,:,:],0,DataTime,axis=1), delimiter=',')
+    
+                        print('Done saving' + '    ' + filename)
+                        print('This took {:.3f} seconds '.format(csv_saving_time))
+                    i +=1
                 ch +=1
-            del ch, each_value
-
-            ## Setup data export
-            #KsInfiniiVisionX.write(":WAVeform:FORMat BYTE")  # needs finesing 
-            KsInfiniiVisionX.write(":WAVeform:FORMAT WORD") # 16 bit word format...
-            KsInfiniiVisionX.write(":WAVeform:BYTeorder LSBFirst") # Explicitly set this to avoid confusion
-            KsInfiniiVisionX.write(":WAVeform:UNSigned 0") # Explicitly set this to avoid confusion
-            KsInfiniiVisionX.write(":WAVeform:SOURce CHANnel" + str(FIRST_CHANNEL_ON))  # Set waveform source to any enabled channel, here the FIRST_CHANNEL_ON
-            KsInfiniiVisionX.write(":WAVeform:POINts MAX") # Set number of points to max possible for any InfiniiVision; ensures all are available
-                ## If using :WAVeform:POINts MAX, be sure to do this BEFORE setting the :WAVeform:POINts:MODE as it will switch it to MAX
-            KsInfiniiVisionX.write(":WAVeform:POINts:MODE RAW")  # Set this now so when the preamble is queried it knows what how many points it can retrieve from
-                ## If measurements are also being made, they are made on a different record, the "measurement record."  This record can be accessed by using:
-                ## :WAVeform:POINts:MODE NORMal isntead of :WAVeform:POINts:MODE RAW
-            POINTS = int(KsInfiniiVisionX.query(":WAVeform:POINts?")) # Get number of points.  This is the number of points in each segment.
-            print str(POINTS) + " points were acquired for each channel for each segment."
-
-            ## Get timing pre-amble data - this can be done at any segment - it does not change segment to segment
-            Pre = KsInfiniiVisionX.query(":WAVeform:PREamble?").split(',')
-            AMODE        = float(Pre[1]) # Gives the scope acquisition mode
-            X_INCrement = float(Pre[4]) # Time difference between data points
-            X_ORIGin    = float(Pre[5]) # Always the first data point in memory
-            X_REFerence = float(Pre[6]) # Specifies the data point associated with x-origin; The x-reference point is the first point displayed and XREFerence is always 0.
-                ## The programmer's guide has a very good description of this, under the info on :WAVeform:PREamble.
-            del Pre
-
-            ## Pre-allocate data array
-            if AMODE == 1: # This means peak detect mode
-                Wav_Data = np.zeros([NUMBER_CHANNELS_ON,2*POINTS,NSEG])
-                ## Peak detect mode returns twice as many points as the points query, one point each for LOW and HIGH values
-            else: # For all other acquistion modes
-                Wav_Data = np.zeros([NUMBER_CHANNELS_ON,POINTS,NSEG])
-
-            ## Create time axis:
-            DataTime = ((np.linspace(0,POINTS-1,POINTS)-X_REFerence)*X_INCrement)+X_ORIGin
-            if AMODE == 1: # This means peak detect mode
-                DataTime = np.repeat(DataTime,2)
-                ##  The points come out as Low(time1),High(time1),Low(time2),High(time2)....
-
-        ## Pull waveform data, scale it - for every segment
-        ch = 1 # channel number
-        i  = 0 # index of Wav_data
-        for each_value in  CHS_ON:
-            #if each_value == 1:
-            # save all channels
-            #print("Channel Number {} : Index of Wav data {} : Segment {}".format(ch,i,n))
-            ## Gets the waveform in 16 bit WORD format
-            Wav_Data[i,:,n-1] = np.array(KsInfiniiVisionX.query_binary_values(':WAVeform:SOURce CHANnel' + str(ch) + ';DATA?', "h", False))
-            ## Scales the waveform
-            Wav_Data[i,:,n-1] = ((Wav_Data[i,:,n-1]-ANALOGVERTPRES[ch+7])*ANALOGVERTPRES[ch-1])+ANALOGVERTPRES[ch+3]
-                ## For clarity: Scaled_waveform_Data[*] = [(Unscaled_Waveform_Data[*] - Y_reference) * Y_increment] + Y_origin
-            i +=1
-            ch +=1
-        del ch, i,
-
-## End of flipping through segments
-## Some cleanup
-if GET_WFM_DATA == "YES":
-    del  ANALOGVERTPRES,Y_INCrement_Ch1, Y_ORIGin_Ch1, Y_REFerence_Ch1, Y_INCrement_Ch2, Y_ORIGin_Ch2, Y_REFerence_Ch2,Y_INCrement_Ch3, Y_ORIGin_Ch3, Y_REFerence_Ch3, Y_INCrement_Ch4, Y_ORIGin_Ch4, Y_REFerence_Ch4, X_INCrement, X_ORIGin, X_REFerence
-
-## Close Connection to scope properly
-KsInfiniiVisionX.clear()
-KsInfiniiVisionX.close()
-
-## Data save operations
-
-## Save waveform data
-if GET_WFM_DATA == "YES":
-
-    #if DO_AVERAGE == "YES":
-    #    Ave_Data = np.mean(Wav_Data,axis = 2)
-    #    Wav_Data = np.dstack((Wav_Data,Ave_Data))
-    #    del Ave_Data
-
-    if OUTPUT_FILE == "CSV" or OUTPUT_FILE == "BOTH": 
-
-        print('Saving waveform(s) in csv format...' )
-
-        segment_indices = np.linspace(1,NSEG,NSEG)
-        segment_indices = [ int(index) for index in segment_indices ] 
-        #segment_indices = np.linspace(1,NSEG,NSEG, dtype = int)
-
-        start_time = time.clock()  # Time saving waveform data to a numpy file
-        i = 0
-        ch = 1
-        for each_value in CHS_ON:
-            if each_value == 1:
-                filename = BASE_DIRECTORY + BASE_FILE_NAME + "_Channel" + str(ch) + ".csv"
-                with open(filename, 'w') as filehandle:
-                    filehandle.write("Timestamp (s):,")
-                    np.savetxt(filehandle, np.atleast_2d(Tags), delimiter=',')
-                    filehandle.write("Segment Index:,")
-                    np.savetxt(filehandle, np.atleast_2d(segment_indices), delimiter=',')
-                    #if DO_AVERAGE == "YES":
-                    #    filehandle.write("Time (s), Waveforms... Final column is averaged.\n")
-                    #else:
-                    filehandle.write("Time (s), Waveforms...\n")
-                    np.savetxt(filehandle, np.insert(Wav_Data[i,:,:],0,DataTime,axis=1), delimiter=',')
-                    csv_saving_time = time.clock() - start_time
-
-                    print('Done saving' + '    ' + filename)
-                    print('This took {:.3f} seconds '.format(csv_saving_time))
+            del each_value, ch, filehandle, filename, segment_indices
+    
+    
+    
+        if OUTPUT_FILE == "BINARY" or OUTPUT_FILE == "BOTH": # save NPY file
+    
+            print('Saving waveform(s) in binary (NumPy) format...' )
+    
+            i = 0
+            ch = 1
+            for each_value in CHS_ON:
+                #if each_value == 1:
+                # actually save all waveforms
+    
+                header = "Time (s),Channel 1 (V)\n"
+                filename = BASE_DIRECTORY + BASE_FILE_NAME + "_Channel" + str(ch) + "_file" + str(fileNum) + ".npy"
+    
+                with open(filename, 'wb') as filehandle:
+                    np.save(filehandle, np.insert(Wav_Data[i,:,:],0,DataTime,axis=1)) 
+                    #np.save(filehandle, np.insert(waveforms, 0, time_axis, axis=1))
                 i +=1
-            ch +=1
-        del each_value, ch, filehandle, filename, segment_indices
+                ch +=1
+                print('Done saving' + '    ' + filename)
+            del each_value, ch, filehandle, filename 
 
-
-
-    if OUTPUT_FILE == "BINARY" or OUTPUT_FILE == "BOTH": # save NPY file
-
-        print('Saving waveform(s) in binary (NumPy) format...' )
-
-        start_time = time.clock()  # Time saving waveform data to a numpy file
-        i = 0
-        ch = 1
-        for each_value in CHS_ON:
-            #if each_value == 1:
-            # actually save all waveforms
-
-            header = "Time (s),Channel 1 (V)\n"
-            filename = BASE_DIRECTORY + BASE_FILE_NAME + "_Channel" + str(ch) + ".npy"
-
-            with open(filename, 'wb') as filehandle:
-                np.save(filehandle, np.insert(Wav_Data[i,:,:],0,DataTime,axis=1)) 
-                #np.save(filehandle, np.insert(waveforms, 0, time_axis, axis=1))
-                npy_saving_time = time.clock() - start_time
-
-            print('Done saving' + '    ' + filename)
-            print('This took {:.3f} seconds '.format(npy_saving_time)
-                      )
-            i +=1
-            ch +=1
-        del each_value, ch, filehandle, filename 
-
+## Done with collecting events?    
+## Close Connection to scope properly
+KsInfiniiVisionX.close()
 del n, BASE_DIRECTORY, BASE_FILE_NAME 
 
+acq_time = time.clock() - start_time
+    
+print('This took {:.3f} seconds '.format(npy_saving_time))
 print "Done."

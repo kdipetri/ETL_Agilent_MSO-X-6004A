@@ -9,10 +9,13 @@ import os
 
 parser = argparse.ArgumentParser(description='Creating a root file from Binary format')
 
-#parser.add_argument('--Run',metavar='Run', type=str, help='Run Number to process',required=True)
-#args = parser.parse_args()
-#run = args.Run
-run = 26
+parser.add_argument('--Run',metavar='Run', type=str, help='Run Number to process',required=True)
+#parser.add_argument('--FileNum',metavar='FileNum', type=int, help='File Number to process',required=True)
+args = parser.parse_args()
+run = args.Run
+#run = 26
+#fileNum= args.FileNum
+fileNum=0
 RawDataPath    = '/home/daq/ScopeData/Raw'
 OutputFilePath = '/home/daq/ScopeData/Converted'
 
@@ -28,10 +31,10 @@ def voltage_array(data,event):
 
 print("Starting conversion.")
 ## read the input files
-inputFile1 = "{}/run_{}_Channel1.npy".format(RawDataPath,run)  
-inputFile2 = "{}/run_{}_Channel2.npy".format(RawDataPath,run) 
-inputFile3 = "{}/run_{}_Channel3.npy".format(RawDataPath,run) 
-inputFile4 = "{}/run_{}_Channel4.npy".format(RawDataPath,run) 
+inputFile1 = "{}/run_{}_Channel1_file{}.npy".format(RawDataPath,run,fileNum)  
+inputFile2 = "{}/run_{}_Channel2_file{}.npy".format(RawDataPath,run,fileNum) 
+inputFile3 = "{}/run_{}_Channel3_file{}.npy".format(RawDataPath,run,fileNum) 
+inputFile4 = "{}/run_{}_Channel4_file{}.npy".format(RawDataPath,run,fileNum) 
 
 arrayChannel1 = np.load(inputFile1) 
 arrayChannel2 = np.load(inputFile2)
@@ -46,7 +49,7 @@ print( "Number of points : {} ".format(n_points) )
 time_array(arrayChannel1)
 
 ## prepare the output files
-outputFile = '{}/run_scope{}.root'.format(OutputFilePath, run)
+outputFile = '{}/run_scope{}_file{}.root'.format(OutputFilePath, run, fileNum)
 outRoot    = TFile(outputFile, "RECREATE")
 outTree    = TTree("pulse","pulse")
 
