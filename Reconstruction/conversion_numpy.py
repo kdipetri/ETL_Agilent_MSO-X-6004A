@@ -9,47 +9,51 @@ import os
 
 parser = argparse.ArgumentParser(description='Creating a root file from Binary format')
 
-parser.add_argument('--Run',metavar='Run', type=str, help='Run Number to process',required=True)
-#parser.add_argument('--FileNum',metavar='FileNum', type=int, help='File Number to process',required=True)
+#parser.add_argument('--Run',metavar='Run', type=str, help='Run Number to process',required=True)
+#parser.add_argument('--FileNumber',metavar='FileNum', type=int, help='File Number to process',required=True)
 args = parser.parse_args()
-run = args.Run
-#run = 26
-#fileNum= args.FileNum
-fileNum=0
+#run = args.Run
+run = 87
+#fileNum= args.FileNumber
+#run = 46
+#fileNum=0
 RawDataPath    = '/home/daq/ScopeData/Raw'
 OutputFilePath = '/home/daq/ScopeData/Converted'
 
 debug=False
 
 def time_array(data):
-    time_array = [x[0] for x in data ]
+    time_array = data[0]  
     return time_array
 
 def voltage_array(data,event):
-    voltage_array = [y[event+1] for y in data] 
+    voltage_array = data[event+1]  
     return voltage_array 
 
 print("Starting conversion.")
 ## read the input files
-inputFile1 = "{}/run_{}_Channel1_file{}.npy".format(RawDataPath,run,fileNum)  
-inputFile2 = "{}/run_{}_Channel2_file{}.npy".format(RawDataPath,run,fileNum) 
-inputFile3 = "{}/run_{}_Channel3_file{}.npy".format(RawDataPath,run,fileNum) 
-inputFile4 = "{}/run_{}_Channel4_file{}.npy".format(RawDataPath,run,fileNum) 
+inputFile1 = "{}/run_{}_Channel1.npy".format(RawDataPath,run)  
+inputFile2 = "{}/run_{}_Channel2.npy".format(RawDataPath,run) 
+inputFile3 = "{}/run_{}_Channel3.npy".format(RawDataPath,run) 
+inputFile4 = "{}/run_{}_Channel4.npy".format(RawDataPath,run) 
 
 arrayChannel1 = np.load(inputFile1) 
 arrayChannel2 = np.load(inputFile2)
 arrayChannel3 = np.load(inputFile3)
 arrayChannel4 = np.load(inputFile4)
 
-n_events = len(arrayChannel1[0]) - 1
-n_points = len(arrayChannel1) 
+n_points = len(arrayChannel1[0]) 
+n_events = len(arrayChannel1) - 1 
+
+#n_events = len(arrayChannel1[0]) - 1
+#n_points = len(arrayChannel1) 
 print( "Number of events : {} ".format(n_events) )
 print( "Number of points : {} ".format(n_points) )
 
 time_array(arrayChannel1)
 
 ## prepare the output files
-outputFile = '{}/run_scope{}_file{}.root'.format(OutputFilePath, run, fileNum)
+outputFile = '{}/run_scope{}.root'.format(OutputFilePath, run )
 outRoot    = TFile(outputFile, "RECREATE")
 outTree    = TTree("pulse","pulse")
 
@@ -65,6 +69,7 @@ outTree.Branch('time'   , time    , 'time[1]['+str(n_points)+']/F' )
 # times - in seconds
 # voltages - in volts
 times = time_array(arrayChannel1)
+print(times)
 for evt in range(n_events):
     if debug and evt%10==0 : 
         print "Processing event %i" % evt 

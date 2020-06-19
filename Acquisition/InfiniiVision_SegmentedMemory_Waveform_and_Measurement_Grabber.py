@@ -64,6 +64,8 @@ start_time = time.clock()  # Time saving waveform data to a numpy file
 ## 8. ALWAYS DO SOME TEST RUNS!!!!! and ensure you are getting what you want and it is later usable!!!!!
 
 ## Initialization constants
+#SCOPE_VISA_ADDRESS = "USB0::2391::6032::MY57191100::INSTR"  # not working... 
+#SCOPE_VISA_ADDRESS = "USB0::0x0957::0x1790::MY57191100::0::INSTR"  # not working... 
 SCOPE_VISA_ADDRESS = "TCPIP::192.168.133.2::INSTR"  # MSOX6004A
 
 GLOBAL_TOUT =  100000 # IO time out in milliseconds
@@ -91,11 +93,14 @@ parser.add_argument('--trig',metavar='trig', type=float, default= -0.05, help='t
 parser.add_argument('--trigSlope',metavar='trigSlope', type=str, default= 'NEGative', help='trigger slope; positive(rise) or negative(fall)',required=False)
 
 parser.add_argument('--vScale1',metavar='vScale1', type=float, default= 0.020, help='Vertical scale, volts/div',required=False)
-parser.add_argument('--vScale2',metavar='vScale2', type=float, default= 0.050, help='Vertical scale, volts/div',required=False)
+parser.add_argument('--vScale2',metavar='vScale2', type=float, default= 0.100, help='Vertical scale, volts/div',required=False)
 parser.add_argument('--vScale3',metavar='vScale3', type=float, default= 0.100, help='Vertical scale, volts/div',required=False)
 parser.add_argument('--vScale4',metavar='vScale4', type=float, default= 0.050, help='Vertical scale, volts/div',required=False)
 
 parser.add_argument('--timeoffset',metavar='timeoffset', type=float, default=-130, help='Offset to compensate for trigger delay. This is the delta T between the center of the acquisition window and the trigger. (default for NimPlusX: -160 ns)',required=False)
+parser.add_argument('--save', metavar='save', type=int, default=1, help='Save waveforms', required=False)
+parser.add_argument('--timeout', metavar='timeout', type=float, default=-1, help='Max run duration [s]', required=False)
+
 
 
 args = parser.parse_args()
@@ -106,6 +111,13 @@ trigLevel = float(args.trig)
 triggerSlope = args.trigSlope
 timeoffset = float(args.timeoffset)*1e-9
 print "timeoffset is ",timeoffset
+
+date = datetime.datetime.now()
+savewaves = int(args.save)
+timeout=float(args.timeout)
+print "saving waves? ", savewaves
+print "timeout is ", timeout
+
 
 # helpful directory info
 this_package="/home/daq/ETL_Agilent_MSO-X-6004A/Acquisition"
@@ -197,6 +209,9 @@ rm = visa.ResourceManager() # this uses pyvisa
 
 ## Open Connection
 ## Define & open the scope by the VISA address ; # This uses PyVisa
+#resource_list = rm.list_resources("?*::INSTR")
+#for resource in resource_list:
+#    print(resource)
 try:
     KsInfiniiVisionX = rm.open_resource(SCOPE_VISA_ADDRESS)
 except Exception:
@@ -255,6 +270,7 @@ logf.write('- CH3: vertical scale set to {} V for division\n'.format(vScale_ch3)
 logf.write('- CH4: vertical scale set to {} V for division\n\n'.format(vScale_ch4))
 
 # Trigger Configuration
+KsInfiniiVisionX.write('TRIGger:SWEep NORMal;')
 KsInfiniiVisionX.write('TRIGger:MODE EDGE; :TRIGger:EDGE:SOURce %s; :TRIGger:LEVel %s, %f'%(trigCh, trigCh, trigLevel))
 KsInfiniiVisionX.write(':TRIGger:EDGE:SLOPe %s;' %(triggerSlope))
 
@@ -277,6 +293,7 @@ for fileNum in range(0,numFiles):
     opc = KsInfiniiVisionX.query(":SINGLE;*OPC?")
     #opc = KsInfiniiVisionX.query(":DIGITIZE;*OPC?")
     #opc = KsInfiniiVisionX.query(":DIGITIZE CHANNEL1;*OPC?")
+    
     
     ##############################################################################################################################################################################
     ##############################################################################################################################################################################
@@ -412,8 +429,8 @@ for fileNum in range(0,numFiles):
                 del ch, each_value
     
                 ## Setup data export
-                #KsInfiniiVisionX.write(":WAVeform:FORMat BYTE")  # needs finesing 
-                KsInfiniiVisionX.write(":WAVeform:FORMAT WORD") # 16 bit word format...
+                KsInfiniiVisionX.write(":WAVeform:FORMat BYTE")  # needs finesing 
+                #KsInfiniiVisionX.write(":WAVeform:FORMAT WORD") # 16 bit word format...
                 KsInfiniiVisionX.write(":WAVeform:BYTeorder LSBFirst") # Explicitly set this to avoid confusion
                 KsInfiniiVisionX.write(":WAVeform:UNSigned 0") # Explicitly set this to avoid confusion
                 KsInfiniiVisionX.write(":WAVeform:SOURce CHANnel" + str(FIRST_CHANNEL_ON))  # Set waveform source to any enabled channel, here the FIRST_CHANNEL_ON
@@ -422,6 +439,7 @@ for fileNum in range(0,numFiles):
                 KsInfiniiVisionX.write(":WAVeform:POINts:MODE RAW")  # Set this now so when the preamble is queried it knows what how many points it can retrieve from
                     ## If measurements are also being made, they are made on a different record, the "measurement record."  This record can be accessed by using:
                     ## :WAVeform:POINts:MODE NORMal isntead of :WAVeform:POINts:MODE RAW
+                KsInfiniiVisionX.write(":WAVeform:SEGMented:ALL ON")
                 POINTS = int(KsInfiniiVisionX.query(":WAVeform:POINts?")) # Get number of points.  This is the number of points in each segment.
                 print str(POINTS) + " points were acquired for each channel for each segment."
     
@@ -450,6 +468,8 @@ for fileNum in range(0,numFiles):
             ## Pull waveform data, scale it - for every segment
             ch = 1 # channel number
             i  = 0 # index of Wav_data
+            FORMAT_MULTIPLIER = 1
+            dtype = 'b'
             for each_value in  CHS_ON:
                 #if each_value == 1:
                 # save all channels
@@ -543,5 +563,5 @@ del n, BASE_DIRECTORY, BASE_FILE_NAME
 
 acq_time = time.clock() - start_time
     
-print('This took {:.3f} seconds '.format(npy_saving_time))
+print('This took {:.3f} seconds '.format(acq_time))
 print "Done."
