@@ -65,7 +65,7 @@ outTree.Branch('time'   , time    , 'time[1]['+str(n_points)+']/F' )
 # times - in seconds
 # voltages - in volts
 times = time_array(arrayChannel1)
-print(times)
+#print(times)
 for evt in range(n_events):
     if debug and evt%10==0 : 
         print "Processing event %i" % evt 
