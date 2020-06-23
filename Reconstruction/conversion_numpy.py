@@ -9,14 +9,10 @@ import os
 
 parser = argparse.ArgumentParser(description='Creating a root file from Binary format')
 
-#parser.add_argument('--Run',metavar='Run', type=str, help='Run Number to process',required=True)
-#parser.add_argument('--FileNumber',metavar='FileNum', type=int, help='File Number to process',required=True)
+parser.add_argument('--Run',metavar='Run', type=str, help='Run Number to process',required=True)
 args = parser.parse_args()
-#run = args.Run
-run = 87
-#fileNum= args.FileNumber
-#run = 46
-#fileNum=0
+run = args.Run
+#run = 106 
 RawDataPath    = '/home/daq/ScopeData/Raw'
 OutputFilePath = '/home/daq/ScopeData/Converted'
 
@@ -27,7 +23,7 @@ def time_array(data):
     return time_array
 
 def voltage_array(data,event):
-    voltage_array = data[event+1]  
+    voltage_array = data[event+1,:]  
     return voltage_array 
 
 print("Starting conversion.")

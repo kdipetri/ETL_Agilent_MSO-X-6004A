@@ -448,9 +448,10 @@ if NUMBER_CHANNELS_ON == 0:
 ################################################################################################################
 ## Setup data export - For repetitive acquisitions, this only needs to be done once unless settings are changed
 
-KsInfiniiVisionX.write(":WAVeform:FORMat BYTE") # 16 bit word format... or BYTE for 8 bit format - WORD recommended, see more comments below when the data is actually retrieved
-#KsInfiniiVisionX.write(":WAVeform:FORMat WORD") # 16 bit word format... or BYTE for 8 bit format - WORD recommended, see more comments below when the data is actually retrieved
+#KsInfiniiVisionX.write(":WAVeform:FORMat BYTE") # 16 bit word format... or BYTE for 8 bit format - WORD recommended, see more comments below when the data is actually retrieved
+KsInfiniiVisionX.write(":WAVeform:FORMat WORD") # 16 bit word format... or BYTE for 8 bit format - WORD recommended, see more comments below when the data is actually retrieved
     ## WORD format especially  recommended  for Average and High Res. Acq. Types, which can produce more than 8 bits of resolution.
+#KsInfiniiVisionX.write(":WAVeform:BYTeorder MSBFirst") # Explicitly set this to avoid confusion - only applies to WORD FORMat
 KsInfiniiVisionX.write(":WAVeform:BYTeorder LSBFirst") # Explicitly set this to avoid confusion - only applies to WORD FORMat
 KsInfiniiVisionX.write(":WAVeform:UNSigned 0") # Explicitly set this to avoid confusion
 
@@ -639,10 +640,10 @@ if TOTAL_BYTES_TO_XFER >= 400000:
 
 now = time.clock() # Only to show how long it takes to transfer and scale the data.
 
-Events_Ch1 = np.empty([numEvents,len(DataTime)])
-Events_Ch2 = np.empty([numEvents,len(DataTime)])
-Events_Ch3 = np.empty([numEvents,len(DataTime)])
-Events_Ch4 = np.empty([numEvents,len(DataTime)])
+Events_Ch1 = np.zeros((numEvents,len(DataTime)))
+Events_Ch2 = np.zeros((numEvents,len(DataTime)))
+Events_Ch3 = np.zeros((numEvents,len(DataTime)))
+Events_Ch4 = np.zeros((numEvents,len(DataTime)))
 for evt in range(0,numEvents):
     ## Channel 1
     ## If on, pull data
@@ -651,32 +652,31 @@ for evt in range(0,numEvents):
         ## Gets the waveform in 16 bit WORD format
         ## The below method uses an IEEE488.2 compliant definite length binary block transfer invoked by :WAVeform:DATA?.
             ## ASCII transfers are also possible, but MUCH slower.
-        Data_Ch1 = np.array(KsInfiniiVisionX.query_binary_values(':WAVeform:SOURce CHANnel1;DATA?', "b", False))
+        Data_Ch1 = np.array(KsInfiniiVisionX.query_binary_values(':WAVeform:SOURce CHANnel1;DATA?', "h", False))
         Data_Ch1 = ((Data_Ch1-Y_REFerence_Ch1)*Y_INCrement_Ch1)+Y_ORIGin_Ch1
         Events_Ch1[evt,:] = Data_Ch1
-        #if evt==0:
-        #    print Events_Ch1[evt,:], Data_Ch1
-        #print Events_Ch1#Data_Ch1
-        if evt == 0: 
-            for x in Data_Ch1:
-                print x
+        #debug:
+        #if evt == 0: 
+        #    print(len(Data_Ch1),len(Events_Ch1[evt,:]))
+        #    for x in range(0,len(Data_Ch1)):
+        #        print Data_Ch1[x], Events_Ch1[evt,x]
         
     ## Channel 2
     if CHAN2_STATE == 1:
-        Data_Ch2 = np.array(KsInfiniiVisionX.query_binary_values(':WAVeform:SOURce CHANnel2;DATA?', "b", False))
+        Data_Ch2 = np.array(KsInfiniiVisionX.query_binary_values(':WAVeform:SOURce CHANnel2;DATA?', "h", False))
         Data_Ch2 = ((Data_Ch2-Y_REFerence_Ch2)*Y_INCrement_Ch2)+Y_ORIGin_Ch2
         Events_Ch2[evt,:] = Data_Ch2
     
     ## Channel 3
     if CHAN3_STATE == 1:
-        Data_Ch3 = np.array(KsInfiniiVisionX.query_binary_values(':WAVeform:SOURce CHANnel3;DATA?', "b", False))
+        Data_Ch3 = np.array(KsInfiniiVisionX.query_binary_values(':WAVeform:SOURce CHANnel3;DATA?', "h", False))
         Data_Ch3 = ((Data_Ch3-Y_REFerence_Ch3)*Y_INCrement_Ch3)+Y_ORIGin_Ch3
         Events_Ch3[evt,:] = Data_Ch3
         #Events_Ch3[:,evt] = np.swapaxes(Data_Ch3,0,1)
     
     ## Channel 4
     if CHAN4_STATE == 1:
-        Data_Ch4 = np.array(KsInfiniiVisionX.query_binary_values(':WAVeform:SOURce CHANnel4;DATA?', "b", False))
+        Data_Ch4 = np.array(KsInfiniiVisionX.query_binary_values(':WAVeform:SOURce CHANnel4;DATA?', "h", False))
         Data_Ch4 = ((Data_Ch4-Y_REFerence_Ch4)*Y_INCrement_Ch4)+Y_ORIGin_Ch4
         Events_Ch4[evt,:] = Data_Ch4
         #Events_Ch4[:,evt] = np.swapaxes(Data_Ch4,0,1)
@@ -719,7 +719,7 @@ if CHAN1_STATE == 1:
 
     filename = BASE_DIRECTORY + BASE_FILE_NAME + "_Channel1.npy"
     with open(filename, 'wb') as filehandle: # wb means open for writing in binary; can overwrite
-        np.save(filehandle, np.vstack((DataTime,Events_Ch2)) ) # See comment above regarding np.vstack and .T
+        np.save(filehandle, np.vstack((DataTime,Events_Ch1)) ) # See comment above regarding np.vstack and .T
 
 ## Channel 2
 if CHAN2_STATE == 1:
