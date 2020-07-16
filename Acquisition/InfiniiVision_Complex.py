@@ -81,16 +81,16 @@ parser = argparse.ArgumentParser(description='Run info.')
 
 parser.add_argument('--numEvents',metavar='Events', type=str,default = 500, help='numEvents (default 500)',required=True)
 parser.add_argument('--runNumber',metavar='runNumber', type=str,default = -1, help='runNumber (default -1)',required=False)
-parser.add_argument('--sampleRate',metavar='sampleRate', type=str,default = 6, help='Sampling rate (default 6)',required=False)
+parser.add_argument('--sampleRate',metavar='sampleRate', type=str,default = 10, help='Sampling rate (default 6)',required=False)
 parser.add_argument('--horizontalWindow',metavar='horizontalWindow', type=str,default = 125, help='horizontal Window (default 125)',required=False)
 # parser.add_argument('--numPoints',metavar='Points', type=str,default = 500, help='numPoints (default 500)',required=True)
 parser.add_argument('--trigCh',metavar='trigCh', type=str, default='AUX',help='trigger Channel (default Aux (-0.1V))',required=False)
 parser.add_argument('--trig',metavar='trig', type=float, default= -0.05, help='trigger value in V (default Aux (-0.05V))',required=False)
 parser.add_argument('--trigSlope',metavar='trigSlope', type=str, default= 'NEGative', help='trigger slope; positive(rise) or negative(fall)',required=False)
 
-parser.add_argument('--vScale1',metavar='vScale1', type=float, default= 0.020, help='Vertical scale, volts/div',required=False)
+parser.add_argument('--vScale1',metavar='vScale1', type=float, default= 0.010, help='Vertical scale, volts/div',required=False)
 parser.add_argument('--vScale2',metavar='vScale2', type=float, default= 0.100, help='Vertical scale, volts/div',required=False)
-parser.add_argument('--vScale3',metavar='vScale3', type=float, default= 0.100, help='Vertical scale, volts/div',required=False)
+parser.add_argument('--vScale3',metavar='vScale3', type=float, default= 0.200, help='Vertical scale, volts/div',required=False)
 parser.add_argument('--vScale4',metavar='vScale4', type=float, default= 0.050, help='Vertical scale, volts/div',required=False)
 
 parser.add_argument('--timeoffset',metavar='timeoffset', type=float, default=-130, help='Offset to compensate for trigger delay. This is the delta T between the center of the acquisition window and the trigger. (default for NimPlusX: -160 ns)',required=False)
@@ -100,7 +100,7 @@ parser.add_argument('--timeout', metavar='timeout', type=float, default=-1, help
 args = parser.parse_args()
 trigCh = str(args.trigCh) 
 runNumberParam = int(args.runNumber) 
-if trigCh != "AUX": trigCh = 'CHANnel'+trigCh
+if trigCh != "AUX" and trigCh!="LINE": trigCh = 'CHANnel'+trigCh
 trigLevel = float(args.trig)
 triggerSlope = args.trigSlope
 timeoffset = float(args.timeoffset)*1e-9
@@ -144,10 +144,10 @@ vScale_ch3 =float(args.vScale3) # in Volts for division
 vScale_ch4 =float(args.vScale4) # in Volts for division
 
 #vertical position
-vPos_ch1 = 1  # in Divisions
-vPos_ch2 = 1  # in Divisions
+vPos_ch1 = 3  # in Divisions
+vPos_ch2 = 3  # in Divisions
 vPos_ch3 = -2  # in Divisions
-vPos_ch4 = 1  # in Divisions
+vPos_ch4 = 3  # in Divisions
 
 date = datetime.datetime.now()
 
@@ -188,7 +188,7 @@ logf.write("---------------------------------------------------------\n\n")
 ##############################################################################################################################################################################
 
 ## Number of Points to request
-USER_REQUESTED_POINTS = 1250
+USER_REQUESTED_POINTS = numPoints#1250
     ## None of these scopes offer more than 8,000,000 points
     ## Setting this to 8000000 or more will ensure that the maximum number of available points is retrieved, though often less will come back.
     ## Average and High Resolution acquisition types have shallow memory depth, and thus acquiring waveforms in Normal acq. type and post processing for High Res. or repeated acqs. for Average is suggested if more points are desired.
@@ -201,7 +201,7 @@ SCOPE_VISA_ADDRESS = "TCPIP::192.168.133.2::INSTR"  # MSOX6004A
     ## Note: USB transfers are generally fastest.
     ## Video: Connecting to Instruments Over LAN, USB, and GPIB in Keysight Connection Expert: https://youtu.be/sZz8bNHX5u4
 
-GLOBAL_TOUT =  10 # IO time out in milliseconds
+GLOBAL_TOUT =  10000 # IO time out in milliseconds
 
 ## Save Locations
 BASE_DIRECTORY = "/home/daq/ETL_Agilent_MSO-X-6004A/Acquisition/tmp_output/"
@@ -243,6 +243,9 @@ KsInfiniiVisionX.timeout = GLOBAL_TOUT
 KsInfiniiVisionX.clear()
 
 ## DO NOT RESET THE SCOPE! - since that would wipe out data...
+# turns off all channels
+# tryingresetting scope because we changed the code to take data...
+#KsInfiniiVisionX.write('*RST')
 
 ## Data should already be acquired and scope should be STOPPED (Run/Stop button is red).
 
@@ -265,6 +268,29 @@ KsInfiniiVisionX.write('ch2:bandwidth full')
 KsInfiniiVisionX.write('ch3:bandwidth full')
 KsInfiniiVisionX.write('ch4:bandwidth full')
 
+#ch1bandwidth=KsInfiniiVisionX.query(':CHANnel1:BANDwidth?')
+#ch2bandwidth=KsInfiniiVisionX.query(':CHANnel2:BANDwidth?')
+#ch3bandwidth=KsInfiniiVisionX.query(':CHANnel3:BANDwidth?')
+#ch4bandwidth=KsInfiniiVisionX.query(':CHANnel4:BANDwidth?')
+#
+#ch1bandwidthlim=KsInfiniiVisionX.query(':CHANnel1:BWLimit?')
+#ch2bandwidthlim=KsInfiniiVisionX.query(':CHANnel2:BWLimit?')
+#ch3bandwidthlim=KsInfiniiVisionX.query(':CHANnel3:BWLimit?')
+#ch4bandwidthlim=KsInfiniiVisionX.query(':CHANnel4:BWLimit?')
+#
+#print("")
+#print("BANDWIDTH")
+#print("CH1 BW", ch1bandwidth)
+#print("CH2 BW", ch2bandwidth)
+#print("CH3 BW", ch3bandwidth)
+#print("CH4 BW", ch4bandwidth)
+#print("")
+#print("CH1 BWlim", ch1bandwidthlim)
+#print("CH2 BWlim", ch2bandwidthlim)
+#print("CH3 BWlim", ch3bandwidthlim)
+#print("CH4 BWlim", ch4bandwidthlim)
+#print("")
+
 # Horizontal Configuration
 KsInfiniiVisionX.write(':STOP;*OPC?')
 
@@ -273,9 +299,11 @@ KsInfiniiVisionX.write(':TIMebase:REFerence:PERCent 50') ## percent of screen lo
 KsInfiniiVisionX.write(':ACQuire:SRATe:ANALog {}'.format(samplingrate))
 KsInfiniiVisionX.write(':TIMebase:POSition {}'.format(timeoffset)) ## offset
 KsInfiniiVisionX.write(':ACQuire:MODE RTIMe') # we just do normal mode
+KsInfiniiVisionX.write(':ACQuire:TYPE NORMal') # we just do normal mode
+#KsInfiniiVisionX.write(':ACQuire:TYPE HRESolution') # try high resolution mode, turns out only works for low sampling rates, ie > 20 microseconds per division at 2 GS/s 
 #KsInfiniiVisionX.write(':ACQuire:MODE SEGMented') ## fast frame/segmented acquisition mode
 #KsInfiniiVisionX.write(':ACQuire:SEGMented:COUNt {}'.format(numSegments)) ##number of segments to acquire
-#KsInfiniiVisionX.write(':ACQuire:POINts:ANALog {}'.format(numPoints))
+KsInfiniiVisionX.write(':ACQuire:POINts:ANALog {}'.format(numPoints))
 KsInfiniiVisionX.write(':ACQuire:INTerpolate 0') ## interpolation is set off (otherwise its set to auto, which cause errors downstream)
 
 print("# SCOPE HORIZONTAL SETUP #")
@@ -295,6 +323,12 @@ KsInfiniiVisionX.write('CHANnel1:OFFSet {}'.format(-vScale_ch1 * vPos_ch1))
 KsInfiniiVisionX.write('CHANnel2:OFFSet {}'.format(-vScale_ch2 * vPos_ch2))
 KsInfiniiVisionX.write('CHANnel3:OFFSet {}'.format(-vScale_ch3 * vPos_ch3))
 KsInfiniiVisionX.write('CHANnel4:OFFSet {}'.format(-vScale_ch4 * vPos_ch4))
+
+print("# SCOPE VERTICAL SETUP #")
+print('- CH1: vertical scale set to {} V for division\n'.format(vScale_ch1))
+print('- CH2: vertical scale set to {} V for division\n'.format(vScale_ch2))
+print('- CH3: vertical scale set to {} V for division\n'.format(vScale_ch3))
+print('- CH4: vertical scale set to {} V for division\n'.format(vScale_ch4))
 
 logf.write("VERTICAL SETUP\n")
 logf.write('- CH1: vertical scale set to {} V for division\n'.format(vScale_ch1))
@@ -365,7 +399,7 @@ else:
     Y_ORIGin_Ch1    = float(Pre[8]) # Voltage at center screen; Could also be found with :WAVeform:YORigin? after setting :WAVeform:SOURce
     Y_REFerence_Ch1 = float(Pre[9]) # Specifies the data point where y-origin occurs, always zero; Could also be found with :WAVeform:YREFerence? after setting :WAVeform:SOURce
     
-    print(Y_INCrement_Ch1,Y_ORIGin_Ch1,Y_REFerence_Ch1)
+    print("CH1 yinc, yorig, yref: ",Y_INCrement_Ch1,Y_ORIGin_Ch1,Y_REFerence_Ch1)
         ## The programmer's guide has a very good description of this, under the info on :WAVeform:PREamble.
     ## In most cases this will need to be done for each channel as the vertical scale and offset will differ. However,
         ## if the vertical scales and offset are identical, the values for one channel can be used for the others.
@@ -451,7 +485,7 @@ if NUMBER_CHANNELS_ON == 0:
 #KsInfiniiVisionX.write(":WAVeform:FORMat BYTE") # 16 bit word format... or BYTE for 8 bit format - WORD recommended, see more comments below when the data is actually retrieved
 KsInfiniiVisionX.write(":WAVeform:FORMat WORD") # 16 bit word format... or BYTE for 8 bit format - WORD recommended, see more comments below when the data is actually retrieved
     ## WORD format especially  recommended  for Average and High Res. Acq. Types, which can produce more than 8 bits of resolution.
-#KsInfiniiVisionX.write(":WAVeform:BYTeorder MSBFirst") # Explicitly set this to avoid confusion - only applies to WORD FORMat
+#KsInfiniiVisionX.write(":WAVeform:BYTeorder MSBFirst") # for debugging 
 KsInfiniiVisionX.write(":WAVeform:BYTeorder LSBFirst") # Explicitly set this to avoid confusion - only applies to WORD FORMat
 KsInfiniiVisionX.write(":WAVeform:UNSigned 0") # Explicitly set this to avoid confusion
 
@@ -464,15 +498,24 @@ KsInfiniiVisionX.write(":WAVeform:UNSigned 0") # Explicitly set this to avoid co
 ## Determine Acquisition Type to set points mode properly
 
 ACQ_TYPE = str(KsInfiniiVisionX.query(":ACQuire:TYPE?")).strip("\n")
+ACQ_MODE = str(KsInfiniiVisionX.query(":ACQuire:MODE?")).strip("\n")
+print("Acquisition type: {}".format(ACQ_TYPE))
+print("Acquisition mode: {}".format(ACQ_MODE))
+
         ## This can also be done when pulling pre-ambles (pre[1]) or may be known ahead of time, but since the script is supposed to find everything, it is done now.
-if ACQ_TYPE == "AVER" or ACQ_TYPE == "HRES": # Don't need to check for both types of mnemonics like this: if ACQ_TYPE == "AVER" or ACQ_TYPE == "AVERage": becasue the scope ALWAYS returns the short form
-    POINTS_MODE = "NORMal" # Use for Average and High Resoultion acquisition Types.
+#if ACQ_TYPE == "AVER" or ACQ_TYPE == "HRES": # Don't need to check for both types of mnemonics like this: if ACQ_TYPE == "AVER" or ACQ_TYPE == "AVERage": becasue the scope ALWAYS returns the short form
+#    POINTS_MODE = "NORMal" # Use for Average and High Resoultion acquisition Types.
         ## If the :WAVeform:POINts:MODE is RAW, and the Acquisition Type is Average, the number of points available is 0. If :WAVeform:POINts:MODE is MAX, it may or may not return 0 points.
         ## If the :WAVeform:POINts:MODE is RAW, and the Acquisition Type is High Resolution, then the effect is (mostly) the same as if the Acq. Type was Normal (no box-car averaging).
         ## Note: if you use :SINGle to acquire the waveform in AVERage Acq. Type, no average is performed, and RAW works. See sample script "InfiniiVision_2_Simple_Synchronization_Methods.py"
-else:
-    POINTS_MODE = "RAW" # Use for Acq. Type NORMal or PEAK
+#else:
+#    POINTS_MODE = "RAW" # Use for Acq. Type NORMal or PEAK
     ## Note, if using "precision mode" on 5/6/70000s or X6000A, then you must use POINTS_MODE = "NORMal" to get the "precision record."
+
+#getting precision record anyway
+POINTS_MODE="NORMal"
+
+print("Points mode: {}".format(POINTS_MODE))
 
 ## Note:
     ## :WAVeform:POINts:MODE RAW corresponds to saving the ASCII XY or Binary data formats to a USB stick on the scope
@@ -600,6 +643,7 @@ if ACQ_TYPE == "PEAK": # This means Peak Detect Acq. Type
 
 ## Get the waveform format
 WFORM = str(KsInfiniiVisionX.query(":WAVeform:FORMat?"))
+print("WAVEFORM:FORMAT {}".format(WFORM))
 if WFORM == "BYTE":
     FORMAT_MULTIPLIER = 1
 else: #WFORM == "WORD"
@@ -638,13 +682,16 @@ if TOTAL_BYTES_TO_XFER >= 400000:
 #####################################################
 ## Pull waveform data, scale it
 
-now = time.clock() # Only to show how long it takes to transfer and scale the data.
+now = time.time() # Only to show how long it takes to transfer and scale the data.
 
-Events_Ch1 = np.zeros((numEvents,len(DataTime)))
-Events_Ch2 = np.zeros((numEvents,len(DataTime)))
-Events_Ch3 = np.zeros((numEvents,len(DataTime)))
-Events_Ch4 = np.zeros((numEvents,len(DataTime)))
+Events_Ch1 = np.zeros((numEvents,len(DataTime)),dtype=np.longdouble)
+Events_Ch2 = np.zeros((numEvents,len(DataTime)),dtype=np.longdouble)
+Events_Ch3 = np.zeros((numEvents,len(DataTime)),dtype=np.longdouble)
+Events_Ch4 = np.zeros((numEvents,len(DataTime)),dtype=np.longdouble)
 for evt in range(0,numEvents):
+
+    if evt%1000==0: print("Acquired {} events".format(evt))
+
     ## Channel 1
     ## If on, pull data
     opc = KsInfiniiVisionX.query(":SINGLE;*OPC?")
@@ -656,10 +703,10 @@ for evt in range(0,numEvents):
         Data_Ch1 = ((Data_Ch1-Y_REFerence_Ch1)*Y_INCrement_Ch1)+Y_ORIGin_Ch1
         Events_Ch1[evt,:] = Data_Ch1
         #debug:
-        #if evt == 0: 
-        #    print(len(Data_Ch1),len(Events_Ch1[evt,:]))
-        #    for x in range(0,len(Data_Ch1)):
-        #        print Data_Ch1[x], Events_Ch1[evt,x]
+        if evt == 0: 
+            print(len(Data_Ch1),len(Events_Ch1[evt,:]))
+            for x in range(0,len(Data_Ch1)):
+                if x < 10: print Data_Ch1[x], Events_Ch1[evt,x]
         
     ## Channel 2
     if CHAN2_STATE == 1:
@@ -688,7 +735,7 @@ for evt in range(0,numEvents):
             ## it can really slow down the script, so set it back to default, which works well.
     KsInfiniiVisionX.clear()
     
-print "\n\nIt took " + str(time.clock() - now) + " seconds to take " + str(numEvents) + " events \n" 
+print "\n\nIt took " + str(time.time() - now) + " seconds to take " + str(numEvents) + " events \n" 
 print str(NUMBER_CHANNELS_ON) + " channel(s) were transfered and scaled. \n"
 print "each channel had " + str(NUMBER_OF_POINTS_TO_ACTUALLY_RETRIEVE) + " points.\n"
 del now
@@ -712,7 +759,7 @@ KsInfiniiVisionX.close()
 ## As a NUMPY BINARY file - fast and small, but really only good for python - can't use header
 ########################################################
 
-now = time.clock() # Only to show how long it takes to save
+now = time.time() # Only to show how long it takes to save
 ## Channel 1
 ## If on, save data
 if CHAN1_STATE == 1:
@@ -740,7 +787,7 @@ if CHAN4_STATE == 1:
     with open(filename, 'wb') as filehandle: # wb means open for writing in binary; can overwrite
         np.save(filehandle, np.vstack((DataTime,Events_Ch4)) ) # See comment above regarding np.vstack and .T
 
-print "It took " + str(time.clock() - now) + " seconds to save 4 channels in binary format."
+print "It took " + str(time.time() - now) + " seconds to save 4 channels in binary format."
 del now
 
 

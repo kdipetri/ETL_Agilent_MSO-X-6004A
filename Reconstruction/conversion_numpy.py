@@ -46,7 +46,6 @@ n_events = len(arrayChannel1) - 1
 print( "Number of events : {} ".format(n_events) )
 print( "Number of points : {} ".format(n_points) )
 
-time_array(arrayChannel1)
 
 ## prepare the output files
 outputFile = '{}/run_scope{}.root'.format(OutputFilePath, run )
@@ -79,6 +78,9 @@ for evt in range(n_events):
     i_evt[0] = evt
 
     outTree.Fill()
+    if evt==0: 
+        print voltage_array(arrayChannel1,evt)
+        print channel[0]
 
 print("Done filling the tree!")
 outRoot.cd()
